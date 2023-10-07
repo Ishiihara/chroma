@@ -1,0 +1,19 @@
+coordinator:
+  cpu: 100m
+  memory: 128Mi
+  ports:
+    grpc: 6649
+
+database:
+  address: "aws.connect.psdb.cloud"
+  username: "90pdmce6we8x28o0nara"
+  password: pscale_pw_sHMR2C9tm5MEY4OTnJATP07qYTLBkV4ImrWDYCGpsde
+  name: test
+
+image:
+  repository: chroma/chroma-coordinator
+  tag: main
+  pullPolicy: Always
+
+pprofEnabled: false
+monitoringEnabled: false
