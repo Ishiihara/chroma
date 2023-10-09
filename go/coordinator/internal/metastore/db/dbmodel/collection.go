@@ -24,8 +24,7 @@ func (v Collection) TableName() string {
 type ICollectionDb interface {
 	// GetCollectionIdTs get the largest timestamp that less than or equal to param ts, no matter is_deleted is true or false.
 	GetCollectionIDTs(collectionID types.UniqueID, ts types.Timestamp) (*Collection, error)
-	ListCollectionIDTs(ts types.Timestamp) ([]*Collection, error)
-	ListCollectionAndMetadataDataTs(ts types.Timestamp) ([]*CollectionAndMetadata, error)
+	GetCollections(collectionID types.UniqueID, collectionName *string, collectionTopic *string) ([]*CollectionAndMetadata, error)
 	Get(collectionID types.UniqueID, ts types.Timestamp) (*Collection, error)
 	GetCollectionIDByName(collectionName string, ts types.Timestamp) (types.UniqueID, error)
 	Insert(in *Collection) error

@@ -10,5 +10,7 @@ import (
 //go:generate mockery --name=Catalog
 type Catalog interface {
 	CreateCollection(ctx context.Context, collectionInfo *model.Collection, ts types.Timestamp) error
-	ListCollections(ctx context.Context, ts types.Timestamp) ([]*model.Collection, error)
+	GetCollections(ctx context.Context, collectionID types.UniqueID, collectionName *string, collectionTopic *string) ([]*model.Collection, error)
+	DeleteCollection(ctx context.Context, collectionID types.UniqueID) error
+	UpdateCollection(ctx context.Context, collectionInfo *model.Collection, ts types.Timestamp) error
 }

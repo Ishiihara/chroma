@@ -6,9 +6,9 @@ import (
 	"github.com/google/uuid"
 )
 
-type Timestamp = uint64
+type Timestamp = int64
 
-const MaxTimestamp = Timestamp(math.MaxUint64)
+const MaxTimestamp = Timestamp(math.MaxInt64)
 
 type UniqueID uuid.UUID
 

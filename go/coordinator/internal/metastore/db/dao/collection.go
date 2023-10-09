@@ -20,47 +20,99 @@ type collectionDb struct {
 func (s *collectionDb) GetCollectionIDTs(collectionID types.UniqueID, ts types.Timestamp) (*dbmodel.Collection, error) {
 	var col dbmodel.Collection
 
-	err := s.db.Model(&dbmodel.Collection{}).Select("id, ts").Where("id = ? AND ts <= ?", collectionID, ts).Order("ts desc").Take(&col).Error
+	err := s.db.Model(&dbmodel.Collection{}).Select("id, ts").Where("id = ? AND ts <= ?", collectionID.String(), ts).Order("ts desc").Take(&col).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		log.Warn("record not found", zap.String("collectionID", collectionID.String()), zap.Uint64("ts", ts), zap.Error(err))
+		log.Warn("record not found", zap.String("collectionID", collectionID.String()), zap.Int64("ts", ts), zap.Error(err))
 		return nil, fmt.Errorf("record not found, collID=%d, ts=%d", collectionID, ts)
 	}
 	if err != nil {
-		log.Error("get collection ts failed", zap.String("collectionID", collectionID.String()), zap.Uint64("ts", ts), zap.Error(err))
+		log.Error("get collection ts failed", zap.String("collectionID", collectionID.String()), zap.Int64("ts", ts), zap.Error(err))
 		return nil, err
 	}
 
 	return &col, nil
 }
 
-func (s *collectionDb) ListCollectionIDTs(ts types.Timestamp) ([]*dbmodel.Collection, error) {
-	var r []*dbmodel.Collection
+func (s *collectionDb) GetCollections(id types.UniqueID, name *string, topic *string) ([]*dbmodel.CollectionAndMetadata, error) {
+	var collections []*dbmodel.CollectionAndMetadata
 
-	err := s.db.Model(&dbmodel.Collection{}).Select("id, MAX(ts) ts").Where("ts <= ?", ts).Group("id").Find(&r).Error
-	if err != nil {
-		log.Error("list id & latest ts pairs in collections failed", zap.Uint64("ts", ts), zap.Error(err))
-		return nil, err
+	query := s.db.Table("collections").
+		Select("collections.id, collections.name, collections.topic, collection_metadata.key, collection_metadata.str_value, collection_metadata.int_value, collection_metadata.float_value").
+		Joins("LEFT JOIN collection_metadata ON collections.id = collection_metadata.collection_id").
+		Order("collections.id")
+
+	if id != types.NilUniqueID() {
+		query = query.Where("collections.id = ?", id.String())
+	}
+	if topic != nil {
+		query = query.Where("collections.topic = ?", *topic)
+	}
+	if name != nil {
+		query = query.Where("collections.name = ?", *name)
 	}
 
-	return r, nil
-}
-
-func (s *collectionDb) ListCollectionAndMetadataDataTs(ts types.Timestamp) ([]*dbmodel.CollectionAndMetadata, error) {
-	var r []*dbmodel.CollectionAndMetadata
-
-	err := s.db.Model(&dbmodel.Collection{}).
-		Joins("LEFT JOIN collection_metadata on collections.id = collection_metadata.collection_id").
-		Where("ts <= ?", ts).
-		Order("collections.id").
-		Find(&r).Error
-
+	rows, err := query.Rows()
 	if err != nil {
-		log.Error("list collections and metadata failed", zap.Uint64("ts", ts), zap.Error(err))
+		log.Error("get collections failed", zap.String("collectionID", id.String()), zap.String("collectionName", *name), zap.String("collectionTopic", *topic), zap.Error(err))
 		return nil, err
 	}
+	defer rows.Close()
 
-	return r, nil
+	var currentCollectionID string = ""
+	var metadata []*dbmodel.CollectionMetadata
+	var currentCollection *dbmodel.CollectionAndMetadata
+
+	for rows.Next() {
+		var (
+			collectionID    string
+			collectionName  string
+			collectionTopic string
+			key             string
+			strValue        string
+			intValue        *int64
+			floatValue      *float64
+		)
+
+		rows.Scan(&collectionID, &collectionName, &collectionTopic, &key, &strValue, &intValue, &floatValue)
+
+		if collectionID != currentCollectionID {
+			currentCollectionID = collectionID
+			metadata = nil
+
+			currentCollection = &dbmodel.CollectionAndMetadata{
+				Collection: &dbmodel.Collection{
+					ID:    collectionID,
+					Name:  collectionName,
+					Topic: collectionTopic,
+				},
+				CollectionMetadata: metadata,
+			}
+
+			if currentCollectionID != "" {
+				collections = append(collections, currentCollection)
+			}
+
+		}
+		collectionMetadata := &dbmodel.CollectionMetadata{
+			Key:          key,
+			CollectionID: collectionID,
+		}
+		if strValue != "" {
+			collectionMetadata.StrValue = strValue
+		}
+		if intValue != nil {
+			collectionMetadata.IntValue = intValue
+		}
+		if floatValue != nil {
+			collectionMetadata.FloatValue = floatValue
+		}
+		metadata = append(metadata, collectionMetadata)
+		currentCollection.CollectionMetadata = metadata
+
+	}
+	return collections, nil
+
 }
 
 func (s *collectionDb) Get(collectionID types.UniqueID, ts types.Timestamp) (*dbmodel.Collection, error) {
@@ -72,7 +124,7 @@ func (s *collectionDb) Get(collectionID types.UniqueID, ts types.Timestamp) (*db
 		return nil, fmt.Errorf("collection not found, collID=%d, ts=%d", collectionID, ts)
 	}
 	if err != nil {
-		log.Error("get collection by collection_id and ts failed", zap.String("collectionID", collectionID.String()), zap.Uint64("ts", ts), zap.Error(err))
+		log.Error("get collection by collection_id and ts failed", zap.String("collectionID", collectionID.String()), zap.Int64("ts", ts), zap.Error(err))
 		return nil, err
 	}
 
@@ -88,7 +140,7 @@ func (s *collectionDb) GetCollectionIDByName(collectionName string, ts types.Tim
 		return types.NilUniqueID(), fmt.Errorf("get id by name not found, collName=%s, ts=%d", collectionName, ts)
 	}
 	if err != nil {
-		log.Error("get id by name failed", zap.String("collName", collectionName), zap.Uint64("ts", ts), zap.Error(err))
+		log.Error("get id by name failed", zap.String("collName", collectionName), zap.Int64("ts", ts), zap.Error(err))
 		return types.NilUniqueID(), err
 	}
 
@@ -102,7 +154,7 @@ func (s *collectionDb) Insert(in *dbmodel.Collection) error {
 	}).Create(&in).Error
 
 	if err != nil {
-		log.Error("insert collection failed", zap.String("collectionID", in.ID), zap.Uint64("ts", in.Ts), zap.Error(err))
+		log.Error("insert collection failed", zap.String("collectionID", in.ID), zap.Int64("ts", in.Ts), zap.Error(err))
 		return err
 	}
 

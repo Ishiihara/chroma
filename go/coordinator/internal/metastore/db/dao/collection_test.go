@@ -1,80 +1,97 @@
 package dao
 
-// import (
-// 	"context"
-// 	"database/sql"
-// 	"os"
-// 	"testing"
+import (
+	"testing"
 
-// 	"github.com/DATA-DOG/go-sqlmock"
-// 	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbcore"
-// 	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbmodel"
-// 	"github.com/milvus-io/milvus/pkg/util/typeutil"
-// 	"github.com/zeebo/assert"
-// 	"gorm.io/driver/mysql"
-// 	"gorm.io/gorm"
-// )
+	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbmodel"
+	"github.com/chroma/chroma-coordinator/internal/types"
+	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+)
 
-// const (
-// 	tenantID   = "test_tenant"
-// 	noTs       = typeutil.Timestamp(0)
-// 	ts         = typeutil.Timestamp(10)
-// 	collID1    = typeutil.UniqueID(101)
-// 	segmentID1 = typeutil.UniqueID(2001)
-// 	segmentID2 = typeutil.UniqueID(2002)
-// 	NumRows    = 1025
-// )
+func TestCollectionDb_GetCollectionIDTs(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	assert.NoError(t, err)
 
-// var (
-// 	mock       sqlmock.Sqlmock
-// 	collTestDb dbmodel.ICollectionDb
-// )
+	err = db.AutoMigrate(&dbmodel.Collection{})
+	assert.NoError(t, err)
 
-// func TestMain(m *testing.M) {
-// 	var (
-// 		db  *sql.DB
-// 		err error
-// 		ctx = context.TODO()
-// 	)
+	uniqueID := types.NewUniqueID()
+	collection := &dbmodel.Collection{
+		ID: uniqueID.String(),
+	}
+	err = db.Create(collection).Error
+	assert.NoError(t, err)
 
-// 	// setting sql MUST exact match
-// 	db, mock, err = sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-// 	if err != nil {
-// 		panic(err)
-// 	}
+	collectionDb := &collectionDb{
+		db: db,
+	}
 
-// 	DB, err := gorm.Open(mysql.New(mysql.Config{
-// 		Conn:                      db,
-// 		SkipInitializeWithVersion: true,
-// 	}), &gorm.Config{})
-// 	if err != nil {
-// 		panic(err)
-// 	}
+	// Test when record is found
+	col, err := collectionDb.GetCollectionIDTs(types.MustParse(collection.ID), types.MaxTimestamp)
+	assert.NoError(t, err)
+	assert.Equal(t, collection.ID, col.ID)
 
-// 	// set mocked database
-// 	dbcore.SetGlobalDB(DB)
+	// Test when record is not found
+	col, err = collectionDb.GetCollectionIDTs(types.NewUniqueID(), types.MaxTimestamp)
+	assert.Error(t, err)
+	assert.Nil(t, col)
+}
 
-// 	collTestDb = NewMetaDomain().CollectionDb(ctx)
+func TestCollectionDb_GetCollections(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	assert.NoError(t, err)
 
-// 	// m.Run entry for executing tests
-// 	os.Exit(m.Run())
-// }
+	err = db.AutoMigrate(&dbmodel.Collection{}, &dbmodel.CollectionMetadata{})
+	assert.NoError(t, err)
 
-// func TestCollection_GetCidTs_Ts0(t *testing.T) {
-// 	var collection = &dbmodel.Collection{
-// 		CollectionID: collID1,
-// 		Ts:           noTs,
-// 	}
+	collection := &dbmodel.Collection{
+		ID:    types.NewUniqueID().String(),
+		Name:  "test_name",
+		Topic: "test_topic",
+	}
+	err = db.Create(collection).Error
+	assert.NoError(t, err)
 
-// 	// expectation
-// 	mock.ExpectQuery("SELECT collection_id, ts FROM `collections` WHERE tenant_id = ? AND collection_id = ? AND ts <= ? ORDER BY ts desc LIMIT 1").
-// 		WithArgs(tenantID, collID1, noTs).
-// 		WillReturnRows(
-// 			sqlmock.NewRows([]string{"collection_id", "ts"}).
-// 				AddRow(collID1, noTs))
+	metadata := &dbmodel.CollectionMetadata{
+		CollectionID: collection.ID,
+		Key:          "test",
+		StrValue:     "test",
+	}
+	err = db.Create(metadata).Error
+	assert.NoError(t, err)
 
-// 	// actual
-// 	res, err := collTestDb.GetCollectionIDTs(tenantID, collID1, noTs)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, collection, res)
-// }
+	collectionDb := &collectionDb{
+		db: db,
+	}
+
+	// Test when all parameters are nil
+	collections, err := collectionDb.GetCollections(types.NilUniqueID(), nil, nil)
+	assert.NoError(t, err)
+	assert.Len(t, collections, 1)
+	assert.Equal(t, collection.ID, collections[0].Collection.ID)
+	assert.Equal(t, collection.Name, collections[0].Collection.Name)
+	assert.Equal(t, collection.Topic, collections[0].Collection.Topic)
+	assert.Len(t, collections[0].CollectionMetadata, 1)
+	assert.Equal(t, metadata.Key, collections[0].CollectionMetadata[0].Key)
+	assert.Equal(t, metadata.StrValue, collections[0].CollectionMetadata[0].StrValue)
+
+	// Test when filtering by ID
+	collections, err = collectionDb.GetCollections(types.MustParse(collection.ID), nil, nil)
+	assert.NoError(t, err)
+	assert.Len(t, collections, 1)
+	assert.Equal(t, collection.ID, collections[0].Collection.ID)
+
+	// Test when filtering by name
+	collections, err = collectionDb.GetCollections(types.NilUniqueID(), &collection.Name, nil)
+	assert.NoError(t, err)
+	assert.Len(t, collections, 1)
+	assert.Equal(t, collection.ID, collections[0].Collection.ID)
+
+	// Test when filtering by topic
+	collections, err = collectionDb.GetCollections(types.NilUniqueID(), nil, &collection.Topic)
+	assert.NoError(t, err)
+	assert.Len(t, collections, 1)
+	assert.Equal(t, collection.ID, collections[0].Collection.ID)
+}

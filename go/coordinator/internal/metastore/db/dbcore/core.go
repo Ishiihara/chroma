@@ -30,13 +30,8 @@ func Connect(cfg MetaDBConfig) error {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&tls=true&interpolateParams=true",
 		cfg.Username, cfg.Password, cfg.Address, cfg.DBName)
 
-	var ormLogger logger.Interface
-	// if log.Level().String() == "debug" {
-	//	ormLogger = logger.Default.LogMode(logger.Info)
-	// } else {
-	ormLogger = logger.Default
-	//}
-
+	ormLogger := logger.Default
+	ormLogger.LogMode(logger.Info)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger:          ormLogger,
 		CreateBatchSize: 100,

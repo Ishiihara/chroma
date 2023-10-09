@@ -6,14 +6,13 @@ import (
 
 	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbcore"
 	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbmodel"
-	"github.com/chroma/chroma-coordinator/internal/model"
 	"github.com/chroma/chroma-coordinator/internal/proto/coordinatorpb"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"pgregory.net/rapid"
 )
 
-func configDatabase() {
+func ConfigDatabase() {
 	dsn := "root:@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local&allowFallbackToPlaintext=true"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -41,7 +40,6 @@ func configDatabase() {
 // Collection created should have the right topic
 // Collection created should have the right timestamp
 func testCollection(t *rapid.T) {
-	// configDatabase()
 	s, err := NewForTest(Config{})
 	if err != nil {
 		t.Fatalf("error creating server: %v", err)
@@ -49,12 +47,24 @@ func testCollection(t *rapid.T) {
 	var state []*coordinatorpb.Collection // model of the collection
 	t.Repeat(map[string]func(*rapid.T){
 		"create_collection": func(t *rapid.T) {
+			stringValue := GenerateStringMetadataValue(t)
+			intValue := GenerateInt64MetadataValue(t)
+			floatValue := GenerateFloat64MetadataValue(t)
+
 			collectionpb := rapid.Custom[*coordinatorpb.Collection](func(t *rapid.T) *coordinatorpb.Collection {
 				return &coordinatorpb.Collection{
 					Id:   rapid.StringMatching(`[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}`).Draw(t, "collection_id"),
 					Name: rapid.String().Draw(t, "collection_name"),
+					Metadata: &coordinatorpb.UpdateMetadata{
+						Metadata: map[string]*coordinatorpb.UpdateMetadataValue{
+							"string_value": stringValue,
+							"int_value":    intValue,
+							"float_value":  floatValue,
+						},
+					},
 				}
-			}).Draw(t, "collectionpb")
+			}).Draw(t, "collection")
+
 			request := coordinatorpb.CreateCollectionRequest{
 				Collection: collectionpb,
 			}
@@ -63,35 +73,38 @@ func testCollection(t *rapid.T) {
 				t.Fatalf("error creating collection: %v", err)
 			}
 			if res.Status.Code != 0 {
-				t.Logf("error creating collection: %v", res.Status.Reason)
-			}
-			if res.Status.Reason != "" {
-				t.Logf("error creating collection: %v", res.Status.Reason)
+				t.Fatalf("error creating collection: %v", res.Status.Reason)
 			}
 			state = append(state, collectionpb)
+		},
+		"list_collections": func(t *rapid.T) {
 		},
 	})
 
 }
 
-func DrawMetadata(t *rapid.T) *rapid.Generator[model.MetadataValueType] {
-	return rapid.OneOf[model.MetadataValueType](
-		rapid.Custom[model.MetadataValueType](func(t *rapid.T) model.MetadataValueType {
-			return &model.MetadataValueStringType{
-				Value: rapid.String().Draw(t, "string_value"),
-			}
-		}),
-		rapid.Custom[model.MetadataValueType](func(t *rapid.T) model.MetadataValueType {
-			return &model.MetadataValueInt64Type{
-				Value: rapid.Int64().Draw(t, "int_value"),
-			}
-		}),
-		rapid.Custom[model.MetadataValueType](func(t *rapid.T) model.MetadataValueType {
-			return &model.MetadataValueFloat64Type{
-				Value: rapid.Float64().Draw(t, "float_value"),
-			}
-		}),
-	)
+func GenerateStringMetadataValue(t *rapid.T) *coordinatorpb.UpdateMetadataValue {
+	return &coordinatorpb.UpdateMetadataValue{
+		Value: &coordinatorpb.UpdateMetadataValue_StringValue{
+			StringValue: rapid.String().Draw(t, "string_value"),
+		},
+	}
+}
+
+func GenerateInt64MetadataValue(t *rapid.T) *coordinatorpb.UpdateMetadataValue {
+	return &coordinatorpb.UpdateMetadataValue{
+		Value: &coordinatorpb.UpdateMetadataValue_IntValue{
+			IntValue: rapid.Int64().Draw(t, "int_value"),
+		},
+	}
+}
+
+func GenerateFloat64MetadataValue(t *rapid.T) *coordinatorpb.UpdateMetadataValue {
+	return &coordinatorpb.UpdateMetadataValue{
+		Value: &coordinatorpb.UpdateMetadataValue_FloatValue{
+			FloatValue: rapid.Float64().Draw(t, "float_value"),
+		},
+	}
 }
 
 func TestCollection(t *testing.T) {

@@ -27,6 +27,7 @@ func (tc *Catalog) CreateCollection(ctx context.Context, collection *model.Colle
 			ID:    collection.ID.String(),
 			Name:  collection.Name,
 			Topic: collection.Topic,
+			Ts:    ts,
 		}
 		err := tc.metaDomain.CollectionDb(txCtx).Insert(dbCollection)
 		if err != nil {
@@ -46,9 +47,9 @@ func (tc *Catalog) CreateCollection(ctx context.Context, collection *model.Colle
 			case *model.MetadataValueStringType:
 				dbCollectionMetadata.StrValue = v.Value
 			case *model.MetadataValueInt64Type:
-				dbCollectionMetadata.IntValue = v.Value
+				dbCollectionMetadata.IntValue = &v.Value
 			case *model.MetadataValueFloat64Type:
-				dbCollectionMetadata.FloatValue = v.Value
+				dbCollectionMetadata.FloatValue = &v.Value
 			default:
 				// TODO: should we throw an error here?
 				continue
@@ -65,41 +66,100 @@ func (tc *Catalog) CreateCollection(ctx context.Context, collection *model.Colle
 	})
 }
 
-func (tc *Catalog) ListCollections(ctx context.Context, ts types.Timestamp) ([]*model.Collection, error) {
-	cidTsPairs, err := tc.metaDomain.CollectionDb(ctx).ListCollectionIDTs(ts)
+func (tc *Catalog) GetCollections(ctx context.Context, collectionID types.UniqueID, collectionName *string, collectionTopic *string) ([]*model.Collection, error) {
+	collectionAndMetadatList, err := tc.metaDomain.CollectionDb(ctx).GetCollections(collectionID, collectionName, collectionTopic)
 	if err != nil {
 		return nil, err
 	}
-	collections := make([]*model.Collection, 0, len(cidTsPairs))
-	for _, cidTsPair := range cidTsPairs {
+	collections := make([]*model.Collection, 0, len(collectionAndMetadatList))
+	for _, collectionAndMetadata := range collectionAndMetadatList {
 		collection := &model.Collection{
-			ID:    types.MustParse(cidTsPair.ID), // Check if we should use it. It's a string in the db.
-			Name:  cidTsPair.Name,
-			Topic: cidTsPair.Topic,
-			Ts:    cidTsPair.Ts,
-		}
-		collections = append(collections, collection)
-	}
-
-	return collections, nil
-}
-
-func (tc *Catalog) ListCollectionsAndMetadata(ctx context.Context, ts types.Timestamp) ([]*model.Collection, error) {
-	collectionAndMetadataList, err := tc.metaDomain.CollectionDb(ctx).ListCollectionAndMetadataDataTs(ts)
-	if err != nil {
-		return nil, err
-	}
-	collections := make([]*model.Collection, 0, len(collectionAndMetadataList))
-	for _, collectionAndMetadata := range collectionAndMetadataList {
-		collection := &model.Collection{
-			ID:    types.MustParse(collectionAndMetadata.Collection.ID), // Check if we should use it. It's a string in the db.
+			ID:    types.MustParse(collectionAndMetadata.Collection.ID),
 			Name:  collectionAndMetadata.Collection.Name,
 			Topic: collectionAndMetadata.Collection.Topic,
 			Ts:    collectionAndMetadata.Collection.Ts,
 		}
-		// TODO: add metadata
+		metadata := model.NewCollectionMetadata[model.MetadataValueType]()
+		for _, collectionMetadata := range collectionAndMetadata.CollectionMetadata {
+			switch {
+			case collectionMetadata.StrValue != "":
+				metadata.Add(collectionMetadata.Key, &model.MetadataValueStringType{Value: collectionMetadata.StrValue})
+			case collectionMetadata.IntValue != nil:
+				metadata.Add(collectionMetadata.Key, &model.MetadataValueInt64Type{Value: *collectionMetadata.IntValue})
+			case collectionMetadata.FloatValue != nil:
+				metadata.Add(collectionMetadata.Key, &model.MetadataValueFloat64Type{Value: *collectionMetadata.FloatValue})
+			}
+		}
+		collection.Metadata = metadata
 		collections = append(collections, collection)
 	}
-
 	return collections, nil
+}
+
+func (tc *Catalog) DeleteCollection(ctx context.Context, collectionID types.UniqueID) error {
+	return tc.txImpl.Transaction(ctx, func(txCtx context.Context) error {
+		// Get the collection
+		// TODO: introduce a new method to get a collection by ID without metadata
+		collections, err := tc.metaDomain.CollectionDb(txCtx).GetCollections(collectionID, nil, nil)
+		if err != nil {
+			return err
+		}
+
+		// Soft Delete
+		for _, collection := range collections {
+			collection.Collection.IsDeleted = true
+			err := tc.metaDomain.CollectionDb(txCtx).Update(collection.Collection)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (tc *Catalog) UpdateCollection(ctx context.Context, collection *model.Collection, ts types.Timestamp) error {
+	return tc.txImpl.Transaction(ctx, func(txCtx context.Context) error {
+		// Get the collection
+		// insert collection
+		dbCollection := &dbmodel.Collection{
+			ID:    collection.ID.String(),
+			Name:  collection.Name,
+			Topic: collection.Topic,
+			Ts:    ts,
+		}
+		err := tc.metaDomain.CollectionDb(txCtx).Insert(dbCollection)
+		if err != nil {
+			return err
+		}
+
+		// insert collection metadata
+		metadata := collection.Metadata
+		dbCollectionMetadataList := make([]*dbmodel.CollectionMetadata, 0, len(metadata.Metadata))
+		for key, value := range metadata.Metadata {
+			dbCollectionMetadata := &dbmodel.CollectionMetadata{
+				CollectionID: dbCollection.ID,
+				Key:          key,
+				Ts:           ts,
+			}
+			switch v := (value).(type) {
+			case *model.MetadataValueStringType:
+				dbCollectionMetadata.StrValue = v.Value
+			case *model.MetadataValueInt64Type:
+				dbCollectionMetadata.IntValue = &v.Value
+			case *model.MetadataValueFloat64Type:
+				dbCollectionMetadata.FloatValue = &v.Value
+			default:
+				// TODO: should we throw an error here?
+				continue
+			}
+			dbCollectionMetadataList = append(dbCollectionMetadataList, dbCollectionMetadata)
+		}
+		if len(dbCollectionMetadataList) != 0 {
+			err = tc.metaDomain.CollectionMetadataDb(txCtx).Insert(dbCollectionMetadataList)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
