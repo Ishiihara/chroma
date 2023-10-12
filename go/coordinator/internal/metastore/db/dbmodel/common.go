@@ -8,6 +8,7 @@ type IMetaDomain interface {
 	CollectionMetadataDb(ctx context.Context) ICollectionMetadataDb
 }
 
+//go:generate mockery --name=ITransaction
 type ITransaction interface {
 	Transaction(ctx context.Context, fn func(txCtx context.Context) error) error
 }

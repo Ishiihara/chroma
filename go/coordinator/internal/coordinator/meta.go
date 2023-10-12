@@ -55,14 +55,16 @@ func (mt *MetaTable) AddCollection(ctx context.Context, coll *model.Collection) 
 	return nil
 }
 
-func (mt *MetaTable) GetCollections(ctx context.Context) ([]*model.Collection, error) {
+func (mt *MetaTable) GetCollections(ctx context.Context, collectionID types.UniqueID) ([]*model.Collection, error) {
 	mt.ddLock.RLock()
 	defer mt.ddLock.RUnlock()
 
 	// Get the data from the cache
 	collections := make([]*model.Collection, 0, len(mt.collectionsCache))
 	for _, collection := range mt.collectionsCache {
-		collections = append(collections, collection)
+		if collectionID != types.NilUniqueID() && collection.ID == collectionID {
+			collections = append(collections, collection)
+		}
 	}
 	return collections, nil
 

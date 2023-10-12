@@ -15,15 +15,15 @@ type ICollectionDb struct {
 }
 
 // Get provides a mock function with given fields: collectionID, ts
-func (_m *ICollectionDb) Get(collectionID types.UniqueID, ts uint64) (*dbmodel.Collection, error) {
+func (_m *ICollectionDb) Get(collectionID types.UniqueID, ts int64) (*dbmodel.Collection, error) {
 	ret := _m.Called(collectionID, ts)
 
 	var r0 *dbmodel.Collection
 	var r1 error
-	if rf, ok := ret.Get(0).(func(types.UniqueID, uint64) (*dbmodel.Collection, error)); ok {
+	if rf, ok := ret.Get(0).(func(types.UniqueID, int64) (*dbmodel.Collection, error)); ok {
 		return rf(collectionID, ts)
 	}
-	if rf, ok := ret.Get(0).(func(types.UniqueID, uint64) *dbmodel.Collection); ok {
+	if rf, ok := ret.Get(0).(func(types.UniqueID, int64) *dbmodel.Collection); ok {
 		r0 = rf(collectionID, ts)
 	} else {
 		if ret.Get(0) != nil {
@@ -31,7 +31,7 @@ func (_m *ICollectionDb) Get(collectionID types.UniqueID, ts uint64) (*dbmodel.C
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(types.UniqueID, uint64) error); ok {
+	if rf, ok := ret.Get(1).(func(types.UniqueID, int64) error); ok {
 		r1 = rf(collectionID, ts)
 	} else {
 		r1 = ret.Error(1)
@@ -41,15 +41,15 @@ func (_m *ICollectionDb) Get(collectionID types.UniqueID, ts uint64) (*dbmodel.C
 }
 
 // GetCollectionIDByName provides a mock function with given fields: collectionName, ts
-func (_m *ICollectionDb) GetCollectionIDByName(collectionName string, ts uint64) (types.UniqueID, error) {
+func (_m *ICollectionDb) GetCollectionIDByName(collectionName string, ts int64) (types.UniqueID, error) {
 	ret := _m.Called(collectionName, ts)
 
 	var r0 types.UniqueID
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, uint64) (types.UniqueID, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, int64) (types.UniqueID, error)); ok {
 		return rf(collectionName, ts)
 	}
-	if rf, ok := ret.Get(0).(func(string, uint64) types.UniqueID); ok {
+	if rf, ok := ret.Get(0).(func(string, int64) types.UniqueID); ok {
 		r0 = rf(collectionName, ts)
 	} else {
 		if ret.Get(0) != nil {
@@ -57,7 +57,7 @@ func (_m *ICollectionDb) GetCollectionIDByName(collectionName string, ts uint64)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, uint64) error); ok {
+	if rf, ok := ret.Get(1).(func(string, int64) error); ok {
 		r1 = rf(collectionName, ts)
 	} else {
 		r1 = ret.Error(1)
@@ -67,15 +67,15 @@ func (_m *ICollectionDb) GetCollectionIDByName(collectionName string, ts uint64)
 }
 
 // GetCollectionIDTs provides a mock function with given fields: collectionID, ts
-func (_m *ICollectionDb) GetCollectionIDTs(collectionID types.UniqueID, ts uint64) (*dbmodel.Collection, error) {
+func (_m *ICollectionDb) GetCollectionIDTs(collectionID types.UniqueID, ts int64) (*dbmodel.Collection, error) {
 	ret := _m.Called(collectionID, ts)
 
 	var r0 *dbmodel.Collection
 	var r1 error
-	if rf, ok := ret.Get(0).(func(types.UniqueID, uint64) (*dbmodel.Collection, error)); ok {
+	if rf, ok := ret.Get(0).(func(types.UniqueID, int64) (*dbmodel.Collection, error)); ok {
 		return rf(collectionID, ts)
 	}
-	if rf, ok := ret.Get(0).(func(types.UniqueID, uint64) *dbmodel.Collection); ok {
+	if rf, ok := ret.Get(0).(func(types.UniqueID, int64) *dbmodel.Collection); ok {
 		r0 = rf(collectionID, ts)
 	} else {
 		if ret.Get(0) != nil {
@@ -83,8 +83,34 @@ func (_m *ICollectionDb) GetCollectionIDTs(collectionID types.UniqueID, ts uint6
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(types.UniqueID, uint64) error); ok {
+	if rf, ok := ret.Get(1).(func(types.UniqueID, int64) error); ok {
 		r1 = rf(collectionID, ts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetCollections provides a mock function with given fields: collectionID, collectionName, collectionTopic
+func (_m *ICollectionDb) GetCollections(collectionID types.UniqueID, collectionName *string, collectionTopic *string) ([]*dbmodel.CollectionAndMetadata, error) {
+	ret := _m.Called(collectionID, collectionName, collectionTopic)
+
+	var r0 []*dbmodel.CollectionAndMetadata
+	var r1 error
+	if rf, ok := ret.Get(0).(func(types.UniqueID, *string, *string) ([]*dbmodel.CollectionAndMetadata, error)); ok {
+		return rf(collectionID, collectionName, collectionTopic)
+	}
+	if rf, ok := ret.Get(0).(func(types.UniqueID, *string, *string) []*dbmodel.CollectionAndMetadata); ok {
+		r0 = rf(collectionID, collectionName, collectionTopic)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*dbmodel.CollectionAndMetadata)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(types.UniqueID, *string, *string) error); ok {
+		r1 = rf(collectionID, collectionName, collectionTopic)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -104,32 +130,6 @@ func (_m *ICollectionDb) Insert(in *dbmodel.Collection) error {
 	}
 
 	return r0
-}
-
-// ListCollectionIDTs provides a mock function with given fields: ts
-func (_m *ICollectionDb) ListCollectionIDTs(ts uint64) ([]*dbmodel.Collection, error) {
-	ret := _m.Called(ts)
-
-	var r0 []*dbmodel.Collection
-	var r1 error
-	if rf, ok := ret.Get(0).(func(uint64) ([]*dbmodel.Collection, error)); ok {
-		return rf(ts)
-	}
-	if rf, ok := ret.Get(0).(func(uint64) []*dbmodel.Collection); ok {
-		r0 = rf(ts)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*dbmodel.Collection)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(uint64) error); ok {
-		r1 = rf(ts)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
 }
 
 // Update provides a mock function with given fields: in

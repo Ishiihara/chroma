@@ -1,7 +1,13 @@
 package coordinator
 
-import "errors"
+import (
+	"errors"
+)
 
-var ErrCollectionExists = errors.New("collection already exists")
-var ErrCollectionNotFound = errors.New("collection not found")
-var ErrCollectionNotExists = errors.New("collection does not exist")
+var (
+	ErrCollectionIDFormat   = errors.New("collection id format error")
+	ErrCollectionNameEmpty  = errors.New("collection name is empty")
+	ErrCollectionTopicEmpty = errors.New("collection topic is empty")
+
+	ErrUnknownMetadataType = errors.New("collection metadata value type not supported")
+)

@@ -30,6 +30,22 @@ func (_m *IMetaDomain) CollectionDb(ctx context.Context) dbmodel.ICollectionDb {
 	return r0
 }
 
+// CollectionMetadataDb provides a mock function with given fields: ctx
+func (_m *IMetaDomain) CollectionMetadataDb(ctx context.Context) dbmodel.ICollectionMetadataDb {
+	ret := _m.Called(ctx)
+
+	var r0 dbmodel.ICollectionMetadataDb
+	if rf, ok := ret.Get(0).(func(context.Context) dbmodel.ICollectionMetadataDb); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(dbmodel.ICollectionMetadataDb)
+		}
+	}
+
+	return r0
+}
+
 // NewIMetaDomain creates a new instance of IMetaDomain. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewIMetaDomain(t interface {

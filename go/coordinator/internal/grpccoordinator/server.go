@@ -9,6 +9,7 @@ import (
 	"github.com/chroma/chroma-coordinator/internal/proto/coordinatorpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
+	"gorm.io/gorm"
 )
 
 type Config struct {
@@ -22,6 +23,9 @@ type Config struct {
 	DBName       string
 	MaxIdleConns int
 	MaxOpenConns int
+
+	// Config for testing
+	Testing bool
 }
 
 type Server struct {
@@ -32,37 +36,7 @@ type Server struct {
 }
 
 func New(config Config) (*Server, error) {
-	return NewWithGrpcProvider(config, grpcutils.Default)
-}
-
-func NewForTest(config Config) (*Server, error) {
-	ctx := context.Background()
-	s := &Server{}
-	coordinatorConfig := coordinator.CooordinatorConfig{
-		BindAddress: config.BindAddress,
-	}
-
-	s.coordinator = coordinator.NewCoordinator(ctx, coordinatorConfig)
-	err := s.coordinator.InitMetaTableForTest()
-	if err != nil {
-		return nil, err
-	}
-	s.coordinator.Start()
-	return s, nil
-}
-
-func NewWithGrpcProvider(config Config, provider grpcutils.GrpcProvider) (*Server, error) {
-	ctx := context.Background()
-
-	s := &Server{
-		healthServer: health.NewServer(),
-	}
-
-	coordinatorConfig := coordinator.CooordinatorConfig{
-		BindAddress: config.BindAddress,
-	}
-
-	metaDBConfig := dbcore.MetaDBConfig{
+	dBConfig := dbcore.DBConfig{
 		Username:     config.Username,
 		Password:     config.Password,
 		Address:      config.Address,
@@ -70,22 +44,34 @@ func NewWithGrpcProvider(config Config, provider grpcutils.GrpcProvider) (*Serve
 		MaxIdleConns: config.MaxIdleConns,
 		MaxOpenConns: config.MaxOpenConns,
 	}
-
-	s.coordinator = coordinator.NewCoordinator(ctx, coordinatorConfig)
-	err := s.coordinator.InitMetaTable(metaDBConfig)
+	db, err := dbcore.Connect(dBConfig)
 	if err != nil {
 		return nil, err
 	}
+	return NewWithGrpcProvider(config, grpcutils.Default, db)
+}
+
+func NewWithGrpcProvider(config Config, provider grpcutils.GrpcProvider, db *gorm.DB) (*Server, error) {
+	ctx := context.Background()
+	s := &Server{
+		healthServer: health.NewServer(),
+	}
+	coordinator, err := coordinator.NewCoordinator(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	s.coordinator = coordinator
 	s.coordinator.Start()
 
 	// Start GRPC Server
-	s.grpcServer, err = provider.StartGrpcServer("coordinator", config.BindAddress, func(registrar grpc.ServiceRegistrar) {
-		coordinatorpb.RegisterMetadataServiceServer(registrar, s)
-	})
-	if err != nil {
-		return nil, err
+	if !config.Testing {
+		s.grpcServer, err = provider.StartGrpcServer("coordinator", config.BindAddress, func(registrar grpc.ServiceRegistrar) {
+			coordinatorpb.RegisterMetadataServiceServer(registrar, s)
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
-
 	return s, nil
 }
 

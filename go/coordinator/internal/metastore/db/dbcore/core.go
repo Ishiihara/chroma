@@ -16,7 +16,7 @@ var (
 	globalDB *gorm.DB
 )
 
-type MetaDBConfig struct {
+type DBConfig struct {
 	Username     string
 	Password     string
 	Address      string
@@ -25,7 +25,7 @@ type MetaDBConfig struct {
 	MaxOpenConns int
 }
 
-func Connect(cfg MetaDBConfig) error {
+func Connect(cfg DBConfig) (*gorm.DB, error) {
 	// load config
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&tls=true&interpolateParams=true",
 		cfg.Username, cfg.Password, cfg.Address, cfg.DBName)
@@ -41,7 +41,7 @@ func Connect(cfg MetaDBConfig) error {
 			zap.String("host", cfg.Address),
 			zap.String("database", cfg.DBName),
 			zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	idb, err := db.DB()
@@ -50,7 +50,7 @@ func Connect(cfg MetaDBConfig) error {
 			zap.String("host", cfg.Address),
 			zap.String("database", cfg.DBName),
 			zap.Error(err))
-		return err
+		return nil, err
 	}
 	idb.SetMaxIdleConns(cfg.MaxIdleConns)
 	idb.SetMaxOpenConns(cfg.MaxOpenConns)
@@ -62,7 +62,7 @@ func Connect(cfg MetaDBConfig) error {
 		zap.String("database", cfg.DBName),
 		zap.Error(err))
 
-	return nil
+	return db, nil
 }
 
 // SetGlobalDB Only for test

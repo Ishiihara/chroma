@@ -19,8 +19,8 @@ func (s *Coordinator) CreateCollection(ctx context.Context, collection *model.Co
 	return nil
 }
 
-func (s *Coordinator) GetCollections(ctx context.Context, collectionID string) ([]*model.Collection, error) {
-	return s.meta.GetCollections(ctx)
+func (s *Coordinator) GetCollections(ctx context.Context, collectionID types.UniqueID) ([]*model.Collection, error) {
+	return s.meta.GetCollections(ctx, collectionID)
 }
 
 func (s *Coordinator) DeleteCollection(ctx context.Context, collectionID types.UniqueID) error {
@@ -39,10 +39,10 @@ func verifyCollection(collection *model.Collection) error {
 		return errors.New("collection ID cannot be empty")
 	}
 	if collection.Name == "" {
-		return errors.New("collection name cannot be empty")
+		return ErrCollectionNameEmpty
 	}
 	if collection.Topic == "" {
-		return errors.New("collection topic cannot be empty")
+		return ErrCollectionTopicEmpty
 	}
 	if err := verifyCollectionMetadata(collection.Metadata); err != nil {
 		return err
@@ -57,7 +57,7 @@ func verifyCollectionMetadata(metadata *model.CollectionMetadata[model.MetadataV
 		case *model.MetadataValueInt64Type:
 		case *model.MetadataValueFloat64Type:
 		default:
-			return errors.New("invalid metadata value type")
+			return ErrUnknownMetadataType
 		}
 	}
 	return nil
