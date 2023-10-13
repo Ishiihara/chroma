@@ -28,7 +28,7 @@ func (mc *MemoryCatalog) CreateCollection(ctx context.Context, collection *model
 func (mc *MemoryCatalog) GetCollections(ctx context.Context, collectionID types.UniqueID, collectionName *string, collectionTopic *string) ([]*model.Collection, error) {
 	collections := make([]*model.Collection, 0, len(mc.Collections))
 	for _, collection := range mc.Collections {
-		if filterCondition(collection, collectionID, collectionName, collectionTopic) {
+		if model.FilterCondition(collection, collectionID, collectionName, collectionTopic) {
 			collections = append(collections, collection)
 		}
 	}
@@ -45,17 +45,4 @@ func (mc *MemoryCatalog) UpdateCollection(ctx context.Context, collection *model
 	mc.Collections[collection.ID] = collection
 	mc.CollectionsMetadata[collection.ID] = collection.Metadata
 	return nil
-}
-
-func filterCondition(collection *model.Collection, collectionID types.UniqueID, collectionName *string, collectionTopic *string) bool {
-	if collectionID != types.NilUniqueID() && collectionID != collection.ID {
-		return false
-	}
-	if collectionName != nil && *collectionName != collection.Name {
-		return false
-	}
-	if collectionTopic != nil && *collectionTopic != collection.Topic {
-		return false
-	}
-	return true
 }

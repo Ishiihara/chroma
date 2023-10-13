@@ -10,3 +10,16 @@ type Collection struct {
 	Metadata  *CollectionMetadata[MetadataValueType]
 	Ts        types.Timestamp
 }
+
+func FilterCondition(collection *Collection, collectionID types.UniqueID, collectionName *string, collectionTopic *string) bool {
+	if collectionID != types.NilUniqueID() && collectionID != collection.ID {
+		return false
+	}
+	if collectionName != nil && *collectionName != collection.Name {
+		return false
+	}
+	if collectionTopic != nil && *collectionTopic != collection.Topic {
+		return false
+	}
+	return true
+}

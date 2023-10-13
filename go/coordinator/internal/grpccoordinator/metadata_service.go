@@ -41,14 +41,34 @@ func (s *Server) CreateCollection(ctx context.Context, req *coordinatorpb.Create
 	return res, nil
 }
 
-// TODO: make this real requests and responses
-func (s *Server) MockGetCollections(ctx context.Context, collectionID string) ([]*model.Collection, error) {
+func (s *Server) GetCollections(ctx context.Context, req *coordinatorpb.GetCollectionsRequest) (*coordinatorpb.GetCollectionsResponse, error) {
+	collectionID := req.GetId()
+	collectionName := req.Name
+	collectionTopic := req.Topic
+
+	res := &coordinatorpb.GetCollectionsResponse{}
 	parsedCollectionID, err := types.Parse(collectionID)
 	if err != nil {
-		log.Error("collection id format error", zap.String("collectionpd.id", collectionID))
-		return nil, coordinator.ErrCollectionIDFormat
+		res.Status = &coordinatorpb.Status{
+			Reason: coordinator.ErrCollectionIDFormat.Error(),
+			Code:   1,
+		}
+		return res, coordinator.ErrCollectionIDFormat
 	}
-	return s.coordinator.GetCollections(ctx, parsedCollectionID)
+	collections, err := s.coordinator.GetCollections(ctx, parsedCollectionID, collectionName, collectionTopic)
+	if err != nil {
+		res.Status = &coordinatorpb.Status{
+			Reason: err.Error(),
+			Code:   1,
+		}
+		return res, err
+	}
+	res.Collections = make([]*coordinatorpb.Collection, 0, len(collections))
+	for _, collection := range collections {
+		collectionpb := convertToProto(collection)
+		res.Collections = append(res.Collections, collectionpb)
+	}
+	return res, nil
 }
 
 func convertToModel(collectionpb *coordinatorpb.Collection) (*model.Collection, error) {
@@ -80,4 +100,35 @@ func convertToModel(collectionpb *coordinatorpb.Collection) (*model.Collection, 
 		Name:     collectionpb.Name,
 		Metadata: metadata,
 	}, nil
+}
+
+func convertToProto(collection *model.Collection) *coordinatorpb.Collection {
+	metadatapb := &coordinatorpb.UpdateMetadata{}
+	for key, value := range collection.Metadata.Metadata {
+		switch v := (value).(type) {
+		case *model.MetadataValueStringType:
+			metadatapb.Metadata[key] = &coordinatorpb.UpdateMetadataValue{
+				Value: &coordinatorpb.UpdateMetadataValue_StringValue{
+					StringValue: v.Value,
+				},
+			}
+		case *model.MetadataValueInt64Type:
+			metadatapb.Metadata[key] = &coordinatorpb.UpdateMetadataValue{
+				Value: &coordinatorpb.UpdateMetadataValue_IntValue{
+					IntValue: v.Value,
+				},
+			}
+		case *model.MetadataValueFloat64Type:
+			metadatapb.Metadata[key] = &coordinatorpb.UpdateMetadataValue{
+				Value: &coordinatorpb.UpdateMetadataValue_FloatValue{
+					FloatValue: v.Value,
+				},
+			}
+		}
+	}
+	return &coordinatorpb.Collection{
+		Id:       collection.ID.String(),
+		Name:     collection.Name,
+		Metadata: metadatapb,
+	}
 }

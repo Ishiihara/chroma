@@ -7,28 +7,9 @@ import (
 	"github.com/chroma/chroma-coordinator/internal/coordinator"
 	"github.com/chroma/chroma-coordinator/internal/grpccoordinator/grpcutils"
 	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbcore"
-	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbmodel"
 	"github.com/chroma/chroma-coordinator/internal/proto/coordinatorpb"
-	"github.com/chroma/chroma-coordinator/internal/types"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"pgregory.net/rapid"
 )
-
-func configDatabase() *gorm.DB {
-	// dsn := "root:@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local&allowFallbackToPlaintext=true"
-	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-	dbcore.SetGlobalDB(db)
-	db.Migrator().DropTable(&dbmodel.Collection{})
-	db.Migrator().DropTable(&dbmodel.CollectionMetadata{})
-	db.Migrator().CreateTable(&dbmodel.Collection{})
-	db.Migrator().CreateTable(&dbmodel.CollectionMetadata{})
-	return db
-}
 
 // Model: What are the system invariants?
 // 1. Collection ID is unique
@@ -45,7 +26,7 @@ func configDatabase() *gorm.DB {
 // Collection created should have the right topic
 // Collection created should have the right timestamp
 func testCollection(t *rapid.T) {
-	db := configDatabase()
+	db := dbcore.ConfigDatabaseForTesting()
 	s, err := NewWithGrpcProvider(Config{Testing: true}, grpcutils.Default, db)
 	if err != nil {
 		t.Fatalf("error creating server: %v", err)
@@ -73,11 +54,11 @@ func testCollection(t *rapid.T) {
 				}
 			}).Draw(t, "collection")
 
-			request := coordinatorpb.CreateCollectionRequest{
+			createCollectionRequest := coordinatorpb.CreateCollectionRequest{
 				Collection: collectionpb,
 			}
 			ctx := context.Background()
-			_, err := s.CreateCollection(ctx, &request)
+			_, err := s.CreateCollection(ctx, &createCollectionRequest)
 			if err != nil {
 				if err == coordinator.ErrCollectionNameEmpty && collectionpb.Name == "" {
 					t.Logf("expected error for empty collection name")
@@ -91,28 +72,29 @@ func testCollection(t *rapid.T) {
 					collectionsWithErrors = append(collectionsWithErrors, collectionpb)
 				}
 			}
+
+			getCollectionsRequest := coordinatorpb.GetCollectionsRequest{
+				Id: &collectionpb.Id,
+			}
 			if err == nil {
 				// verify the correctness
-				collectionList, err := s.MockGetCollections(ctx, collectionpb.Id)
+				GetCollectionsResponse, err := s.GetCollections(ctx, &getCollectionsRequest)
 				if err != nil {
 					t.Fatalf("error getting collections: %v", err)
 				}
+				collectionList := GetCollectionsResponse.GetCollections()
 				if len(collectionList) != 1 {
 					t.Fatalf("More than 1 collection with the same collection id")
 				}
 				for _, collection := range collectionList {
-					parsedCollectionID, err := types.Parse(collectionpb.Id)
-					if err != nil {
-						t.Fatalf("collection id is the right type : %v", err)
-					}
-					if collection.ID != parsedCollectionID {
+					if collection.Id != collectionpb.Id {
 						t.Fatalf("collection id is the right value")
 					}
 				}
 				state = append(state, collectionpb)
 			}
 		},
-		"list_collections": func(t *rapid.T) {
+		"get_collections": func(t *rapid.T) {
 		},
 	})
 }

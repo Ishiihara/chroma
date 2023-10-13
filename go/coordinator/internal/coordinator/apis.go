@@ -19,8 +19,8 @@ func (s *Coordinator) CreateCollection(ctx context.Context, collection *model.Co
 	return nil
 }
 
-func (s *Coordinator) GetCollections(ctx context.Context, collectionID types.UniqueID) ([]*model.Collection, error) {
-	return s.meta.GetCollections(ctx, collectionID)
+func (s *Coordinator) GetCollections(ctx context.Context, collectionID types.UniqueID, collectionName *string, collectionTopic *string) ([]*model.Collection, error) {
+	return s.meta.GetCollections(ctx, collectionID, collectionName, collectionTopic)
 }
 
 func (s *Coordinator) DeleteCollection(ctx context.Context, collectionID types.UniqueID) error {

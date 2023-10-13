@@ -5,29 +5,13 @@ import (
 	"testing"
 
 	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbcore"
-	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbmodel"
 	"github.com/chroma/chroma-coordinator/internal/model"
 	"github.com/chroma/chroma-coordinator/internal/types"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"pgregory.net/rapid"
 )
 
-func configDatabase() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-	dbcore.SetGlobalDB(db)
-	db.Migrator().DropTable(&dbmodel.Collection{})
-	db.Migrator().DropTable(&dbmodel.CollectionMetadata{})
-	db.Migrator().CreateTable(&dbmodel.Collection{})
-	db.Migrator().CreateTable(&dbmodel.CollectionMetadata{})
-	return db
-}
-
 func testCollection(t *rapid.T) {
-	db := configDatabase()
+	db := dbcore.ConfigDatabaseForTesting()
 	ctx := context.Background()
 	c, err := NewCoordinator(ctx, db)
 	if err != nil {
@@ -65,7 +49,7 @@ func testCollection(t *rapid.T) {
 			}
 			if err == nil {
 				// verify the correctness
-				collectionList, err := c.GetCollections(ctx, collection.ID)
+				collectionList, err := c.GetCollections(ctx, collection.ID, nil, nil)
 				if err != nil {
 					t.Fatalf("error getting collections: %v", err)
 				}

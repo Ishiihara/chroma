@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbmodel"
 	"github.com/pingcap/log"
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -108,4 +110,17 @@ func GetDB(ctx context.Context) *gorm.DB {
 	}
 
 	return globalDB.WithContext(ctx)
+}
+
+func ConfigDatabaseForTesting() *gorm.DB {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	SetGlobalDB(db)
+	db.Migrator().DropTable(&dbmodel.Collection{})
+	db.Migrator().DropTable(&dbmodel.CollectionMetadata{})
+	db.Migrator().CreateTable(&dbmodel.Collection{})
+	db.Migrator().CreateTable(&dbmodel.CollectionMetadata{})
+	return db
 }
