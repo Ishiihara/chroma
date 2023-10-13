@@ -17,9 +17,9 @@ func TestMemoryCatalog(t *testing.T) {
 		ID:    types.NewUniqueID(),
 		Name:  "test-collection-name",
 		Topic: "test-collection-topic",
-		Metadata: &model.CollectionMetadata[model.MetadataValueType]{
-			Metadata: map[string]model.MetadataValueType{
-				"test-metadata-key": &model.MetadataValueStringType{Value: "test-metadata-value"},
+		Metadata: &model.CollectionMetadata[model.CollectionMetadataValueType]{
+			Metadata: map[string]model.CollectionMetadataValueType{
+				"test-metadata-key": &model.CollectionMetadataValueStringType{Value: "test-metadata-value"},
 			},
 		},
 	}

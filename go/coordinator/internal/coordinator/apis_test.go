@@ -23,7 +23,7 @@ func testCollection(t *rapid.T) {
 			intValue := generateInt64MetadataValue(t)
 			floatValue := generateFloat64MetadataValue(t)
 
-			metadata := model.NewCollectionMetadata[model.MetadataValueType]()
+			metadata := model.NewCollectionMetadata[model.CollectionMetadataValueType]()
 			metadata.Add("string_value", stringValue)
 			metadata.Add("int_value", intValue)
 			metadata.Add("float_value", floatValue)
@@ -69,20 +69,20 @@ func testCollection(t *rapid.T) {
 	})
 }
 
-func generateStringMetadataValue(t *rapid.T) model.MetadataValueType {
-	return &model.MetadataValueStringType{
+func generateStringMetadataValue(t *rapid.T) model.CollectionMetadataValueType {
+	return &model.CollectionMetadataValueStringType{
 		Value: rapid.String().Draw(t, "string_value"),
 	}
 }
 
-func generateInt64MetadataValue(t *rapid.T) model.MetadataValueType {
-	return &model.MetadataValueInt64Type{
+func generateInt64MetadataValue(t *rapid.T) model.CollectionMetadataValueType {
+	return &model.CollectionMetadataValueInt64Type{
 		Value: rapid.Int64().Draw(t, "int_value"),
 	}
 }
 
-func generateFloat64MetadataValue(t *rapid.T) model.MetadataValueType {
-	return &model.MetadataValueFloat64Type{
+func generateFloat64MetadataValue(t *rapid.T) model.CollectionMetadataValueType {
+	return &model.CollectionMetadataValueFloat64Type{
 		Value: rapid.Float64().Draw(t, "float_value"),
 	}
 }

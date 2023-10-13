@@ -112,7 +112,6 @@ func (s *collectionDb) GetCollections(id types.UniqueID, name *string, topic *st
 
 	}
 	return collections, nil
-
 }
 
 func (s *collectionDb) Get(collectionID types.UniqueID, ts types.Timestamp) (*dbmodel.Collection, error) {

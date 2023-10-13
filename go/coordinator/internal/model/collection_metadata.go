@@ -1,32 +1,32 @@
 package model
 
-type MetadataValueType interface {
-	IsMetadataValueType()
+type CollectionMetadataValueType interface {
+	IsCollectionMetadataValueType()
 }
 
-type MetadataValueStringType struct {
+type CollectionMetadataValueStringType struct {
 	Value string
 }
 
-func (s *MetadataValueStringType) IsMetadataValueType() {}
+func (s *CollectionMetadataValueStringType) IsCollectionMetadataValueType() {}
 
-type MetadataValueInt64Type struct {
+type CollectionMetadataValueInt64Type struct {
 	Value int64
 }
 
-func (s *MetadataValueInt64Type) IsMetadataValueType() {}
+func (s *CollectionMetadataValueInt64Type) IsCollectionMetadataValueType() {}
 
-type MetadataValueFloat64Type struct {
+type CollectionMetadataValueFloat64Type struct {
 	Value float64
 }
 
-func (s *MetadataValueFloat64Type) IsMetadataValueType() {}
+func (s *CollectionMetadataValueFloat64Type) IsCollectionMetadataValueType() {}
 
-type CollectionMetadata[T MetadataValueType] struct {
+type CollectionMetadata[T CollectionMetadataValueType] struct {
 	Metadata map[string]T
 }
 
-func NewCollectionMetadata[T MetadataValueType]() *CollectionMetadata[T] {
+func NewCollectionMetadata[T CollectionMetadataValueType]() *CollectionMetadata[T] {
 	return &CollectionMetadata[T]{
 		Metadata: make(map[string]T),
 	}

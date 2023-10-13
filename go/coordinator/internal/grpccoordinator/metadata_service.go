@@ -79,19 +79,19 @@ func convertToModel(collectionpb *coordinatorpb.Collection) (*model.Collection, 
 	}
 
 	metadatapb := collectionpb.Metadata
-	metadata := model.NewCollectionMetadata[model.MetadataValueType]()
+	metadata := model.NewCollectionMetadata[model.CollectionMetadataValueType]()
 	if metadatapb != nil {
 		for key, value := range metadatapb.Metadata {
 			switch v := (value.Value).(type) {
 			case *coordinatorpb.UpdateMetadataValue_StringValue:
-				metadata.Add(key, &model.MetadataValueStringType{Value: v.StringValue})
+				metadata.Add(key, &model.CollectionMetadataValueStringType{Value: v.StringValue})
 			case *coordinatorpb.UpdateMetadataValue_IntValue:
-				metadata.Add(key, &model.MetadataValueInt64Type{Value: v.IntValue})
+				metadata.Add(key, &model.CollectionMetadataValueInt64Type{Value: v.IntValue})
 			case *coordinatorpb.UpdateMetadataValue_FloatValue:
-				metadata.Add(key, &model.MetadataValueFloat64Type{Value: v.FloatValue})
+				metadata.Add(key, &model.CollectionMetadataValueFloat64Type{Value: v.FloatValue})
 			default:
 				log.Error("collection metadata value type not supported", zap.Any("metadata value", value))
-				return nil, coordinator.ErrUnknownMetadataType
+				return nil, coordinator.ErrUnknownCollectionMetadataType
 			}
 		}
 	}
@@ -106,19 +106,19 @@ func convertToProto(collection *model.Collection) *coordinatorpb.Collection {
 	metadatapb := &coordinatorpb.UpdateMetadata{}
 	for key, value := range collection.Metadata.Metadata {
 		switch v := (value).(type) {
-		case *model.MetadataValueStringType:
+		case *model.CollectionMetadataValueStringType:
 			metadatapb.Metadata[key] = &coordinatorpb.UpdateMetadataValue{
 				Value: &coordinatorpb.UpdateMetadataValue_StringValue{
 					StringValue: v.Value,
 				},
 			}
-		case *model.MetadataValueInt64Type:
+		case *model.CollectionMetadataValueInt64Type:
 			metadatapb.Metadata[key] = &coordinatorpb.UpdateMetadataValue{
 				Value: &coordinatorpb.UpdateMetadataValue_IntValue{
 					IntValue: v.Value,
 				},
 			}
-		case *model.MetadataValueFloat64Type:
+		case *model.CollectionMetadataValueFloat64Type:
 			metadatapb.Metadata[key] = &coordinatorpb.UpdateMetadataValue{
 				Value: &coordinatorpb.UpdateMetadataValue_FloatValue{
 					FloatValue: v.Value,

@@ -6,6 +6,8 @@ import "context"
 type IMetaDomain interface {
 	CollectionDb(ctx context.Context) ICollectionDb
 	CollectionMetadataDb(ctx context.Context) ICollectionMetadataDb
+	SegmentDb(ctx context.Context) ISegmentDb
+	SegmentMetadataDb(ctx context.Context) ISegmentMetadataDb
 }
 
 //go:generate mockery --name=ITransaction

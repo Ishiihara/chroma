@@ -20,3 +20,11 @@ func (*metaDomain) CollectionDb(ctx context.Context) dbmodel.ICollectionDb {
 func (*metaDomain) CollectionMetadataDb(ctx context.Context) dbmodel.ICollectionMetadataDb {
 	return &collectionMetadataDb{dbcore.GetDB(ctx)}
 }
+
+func (*metaDomain) SegmentDb(ctx context.Context) dbmodel.ISegmentDb {
+	return &segmentDb{dbcore.GetDB(ctx)}
+}
+
+func (*metaDomain) SegmentMetadataDb(ctx context.Context) dbmodel.ISegmentMetadataDb {
+	return &segmentMetadataDb{dbcore.GetDB(ctx)}
+}

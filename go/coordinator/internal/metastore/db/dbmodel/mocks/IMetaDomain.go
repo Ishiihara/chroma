@@ -46,6 +46,38 @@ func (_m *IMetaDomain) CollectionMetadataDb(ctx context.Context) dbmodel.ICollec
 	return r0
 }
 
+// SegmentDb provides a mock function with given fields: ctx
+func (_m *IMetaDomain) SegmentDb(ctx context.Context) dbmodel.ISegmentDb {
+	ret := _m.Called(ctx)
+
+	var r0 dbmodel.ISegmentDb
+	if rf, ok := ret.Get(0).(func(context.Context) dbmodel.ISegmentDb); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(dbmodel.ISegmentDb)
+		}
+	}
+
+	return r0
+}
+
+// SegmentMetadataDb provides a mock function with given fields: ctx
+func (_m *IMetaDomain) SegmentMetadataDb(ctx context.Context) dbmodel.ISegmentMetadataDb {
+	ret := _m.Called(ctx)
+
+	var r0 dbmodel.ISegmentMetadataDb
+	if rf, ok := ret.Get(0).(func(context.Context) dbmodel.ISegmentMetadataDb); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(dbmodel.ISegmentMetadataDb)
+		}
+	}
+
+	return r0
+}
+
 // NewIMetaDomain creates a new instance of IMetaDomain. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewIMetaDomain(t interface {

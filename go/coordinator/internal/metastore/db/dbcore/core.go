@@ -28,7 +28,6 @@ type DBConfig struct {
 }
 
 func Connect(cfg DBConfig) (*gorm.DB, error) {
-	// load config
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&tls=true&interpolateParams=true",
 		cfg.Username, cfg.Password, cfg.Address, cfg.DBName)
 

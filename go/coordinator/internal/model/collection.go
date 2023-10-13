@@ -7,11 +7,11 @@ type Collection struct {
 	Name      string
 	Topic     string
 	Dimension int64
-	Metadata  *CollectionMetadata[MetadataValueType]
+	Metadata  *CollectionMetadata[CollectionMetadataValueType]
 	Ts        types.Timestamp
 }
 
-func FilterCondition(collection *Collection, collectionID types.UniqueID, collectionName *string, collectionTopic *string) bool {
+func FilterCollection(collection *Collection, collectionID types.UniqueID, collectionName *string, collectionTopic *string) bool {
 	if collectionID != types.NilUniqueID() && collectionID != collection.ID {
 		return false
 	}

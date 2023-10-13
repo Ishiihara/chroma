@@ -20,6 +20,11 @@ func (v Collection) TableName() string {
 	return "collections"
 }
 
+type CollectionAndMetadata struct {
+	Collection         *Collection
+	CollectionMetadata []*CollectionMetadata
+}
+
 //go:generate mockery --name=ICollectionDb
 type ICollectionDb interface {
 	// GetCollectionIdTs get the largest timestamp that less than or equal to param ts, no matter is_deleted is true or false.
@@ -29,9 +34,4 @@ type ICollectionDb interface {
 	GetCollectionIDByName(collectionName string, ts types.Timestamp) (types.UniqueID, error)
 	Insert(in *Collection) error
 	Update(in *Collection) error
-}
-
-type CollectionAndMetadata struct {
-	Collection         *Collection
-	CollectionMetadata []*CollectionMetadata
 }

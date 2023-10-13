@@ -14,6 +14,7 @@ type MetaTable struct {
 	ctx              context.Context
 	catalog          metastore.Catalog
 	collectionsCache map[types.UniqueID]*model.Collection
+	segmentsCache    map[types.UniqueID]*model.Segment
 }
 
 func NewMetaTable(ctx context.Context, catalog metastore.Catalog) (*MetaTable, error) {
@@ -62,7 +63,7 @@ func (mt *MetaTable) GetCollections(ctx context.Context, collectionID types.Uniq
 	// Get the data from the cache
 	collections := make([]*model.Collection, 0, len(mt.collectionsCache))
 	for _, collection := range mt.collectionsCache {
-		if model.FilterCondition(collection, collectionID, collectionName, collectionTopic) {
+		if model.FilterCollection(collection, collectionID, collectionName, collectionTopic) {
 			collections = append(collections, collection)
 		}
 	}
@@ -89,5 +90,16 @@ func (mt *MetaTable) UpdateCollection(ctx context.Context, collection *model.Col
 		return err
 	}
 	mt.collectionsCache[types.UniqueID(collection.ID)] = collection
+	return nil
+}
+
+func (mt *MetaTable) AddSegment(ctx context.Context, segment *model.Segment) error {
+	mt.ddLock.Lock()
+	defer mt.ddLock.Unlock()
+
+	if err := mt.catalog.CreateSegment(ctx, segment, segment.Ts); err != nil {
+		return err
+	}
+	mt.segmentsCache[types.UniqueID(segment.ID)] = segment
 	return nil
 }

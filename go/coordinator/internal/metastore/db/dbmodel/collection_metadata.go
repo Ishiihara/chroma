@@ -7,7 +7,7 @@ import (
 )
 
 type CollectionMetadata struct {
-	CollectionID string          `gorm:"id"`
+	CollectionID string          `gorm:"collection_id"`
 	Key          string          `gorm:"key"`
 	StrValue     string          `gorm:"str_value"`
 	IntValue     *int64          `gorm:"int_value"`

@@ -24,9 +24,9 @@ func testMeta(t *rapid.T) {
 					Name:      rapid.String().Draw(t, "name"),
 					Topic:     rapid.String().Draw(t, "topic"),
 					Dimension: rapid.Int64().Draw(t, "dimension"),
-					Metadata: rapid.Custom[*model.CollectionMetadata[model.MetadataValueType]](func(t *rapid.T) *model.CollectionMetadata[model.MetadataValueType] {
-						return &model.CollectionMetadata[model.MetadataValueType]{
-							Metadata: rapid.MapOf[string, model.MetadataValueType](rapid.StringMatching(`[a-zA-Z0-9_]+`), drawMetadata(t)).Draw(t, "metadata"),
+					Metadata: rapid.Custom[*model.CollectionMetadata[model.CollectionMetadataValueType]](func(t *rapid.T) *model.CollectionMetadata[model.CollectionMetadataValueType] {
+						return &model.CollectionMetadata[model.CollectionMetadataValueType]{
+							Metadata: rapid.MapOf[string, model.CollectionMetadataValueType](rapid.StringMatching(`[a-zA-Z0-9_]+`), drawMetadata(t)).Draw(t, "metadata"),
 						}
 					}).Draw(t, "metadata"),
 				}
@@ -67,9 +67,9 @@ func testMeta(t *rapid.T) {
 					Name:      rapid.String().Draw(t, "name"),
 					Topic:     rapid.String().Draw(t, "topic"),
 					Dimension: rapid.Int64().Draw(t, "dimension"),
-					Metadata: rapid.Custom[*model.CollectionMetadata[model.MetadataValueType]](func(t *rapid.T) *model.CollectionMetadata[model.MetadataValueType] {
-						return &model.CollectionMetadata[model.MetadataValueType]{
-							Metadata: rapid.MapOf[string, model.MetadataValueType](rapid.StringMatching(`[a-zA-Z0-9_]+`), drawMetadata(t)).Draw(t, "metadata"),
+					Metadata: rapid.Custom[*model.CollectionMetadata[model.CollectionMetadataValueType]](func(t *rapid.T) *model.CollectionMetadata[model.CollectionMetadataValueType] {
+						return &model.CollectionMetadata[model.CollectionMetadataValueType]{
+							Metadata: rapid.MapOf[string, model.CollectionMetadataValueType](rapid.StringMatching(`[a-zA-Z0-9_]+`), drawMetadata(t)).Draw(t, "metadata"),
 						}
 					}).Draw(t, "metadata"),
 				}
@@ -92,20 +92,20 @@ func testMeta(t *rapid.T) {
 	})
 }
 
-func drawMetadata(t *rapid.T) *rapid.Generator[model.MetadataValueType] {
-	return rapid.OneOf[model.MetadataValueType](
-		rapid.Custom[model.MetadataValueType](func(t *rapid.T) model.MetadataValueType {
-			return &model.MetadataValueStringType{
+func drawMetadata(t *rapid.T) *rapid.Generator[model.CollectionMetadataValueType] {
+	return rapid.OneOf[model.CollectionMetadataValueType](
+		rapid.Custom[model.CollectionMetadataValueType](func(t *rapid.T) model.CollectionMetadataValueType {
+			return &model.CollectionMetadataValueStringType{
 				Value: rapid.String().Draw(t, "string_value"),
 			}
 		}),
-		rapid.Custom[model.MetadataValueType](func(t *rapid.T) model.MetadataValueType {
-			return &model.MetadataValueInt64Type{
+		rapid.Custom[model.CollectionMetadataValueType](func(t *rapid.T) model.CollectionMetadataValueType {
+			return &model.CollectionMetadataValueInt64Type{
 				Value: rapid.Int64().Draw(t, "int_value"),
 			}
 		}),
-		rapid.Custom[model.MetadataValueType](func(t *rapid.T) model.MetadataValueType {
-			return &model.MetadataValueFloat64Type{
+		rapid.Custom[model.CollectionMetadataValueType](func(t *rapid.T) model.CollectionMetadataValueType {
+			return &model.CollectionMetadataValueFloat64Type{
 				Value: rapid.Float64().Draw(t, "float_value"),
 			}
 		}),

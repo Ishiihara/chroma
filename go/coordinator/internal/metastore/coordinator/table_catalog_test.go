@@ -23,8 +23,8 @@ func TestCatalog_CreateCollection(t *testing.T) {
 	catalog := NewTableCatalog(mockTxImpl, mockMetaDomain)
 
 	// create a mock collection
-	metadata := model.NewCollectionMetadata[model.MetadataValueType]()
-	metadata.Add("test_key", &model.MetadataValueStringType{Value: "test_value"})
+	metadata := model.NewCollectionMetadata[model.CollectionMetadataValueType]()
+	metadata.Add("test_key", &model.CollectionMetadataValueStringType{Value: "test_value"})
 	collection := &model.Collection{
 		ID:       types.MustParse("00000000-0000-0000-0000-000000000001"),
 		Name:     "test_collection",
@@ -113,8 +113,8 @@ func TestCatalog_GetCollections(t *testing.T) {
 	assert.NoError(t, err)
 
 	// assert that the collections were returned as expected
-	metadata := model.NewCollectionMetadata[model.MetadataValueType]()
-	metadata.Add("test_key", &model.MetadataValueStringType{Value: "test_value"})
+	metadata := model.NewCollectionMetadata[model.CollectionMetadataValueType]()
+	metadata.Add("test_key", &model.CollectionMetadataValueStringType{Value: "test_value"})
 	assert.Equal(t, []*model.Collection{
 		{
 			ID:       types.MustParse("00000000-0000-0000-0000-000000000001"),

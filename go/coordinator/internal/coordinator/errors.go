@@ -9,5 +9,6 @@ var (
 	ErrCollectionNameEmpty  = errors.New("collection name is empty")
 	ErrCollectionTopicEmpty = errors.New("collection topic is empty")
 
-	ErrUnknownMetadataType = errors.New("collection metadata value type not supported")
+	ErrUnknownCollectionMetadataType = errors.New("collection metadata value type not supported")
+	ErrUnknownSegmentMetadataType    = errors.New("segment metadata value type not supported")
 )
