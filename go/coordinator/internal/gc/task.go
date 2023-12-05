@@ -3,49 +3,54 @@ package gc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/pingcap/log"
 	"go.uber.org/zap"
 )
 
 type TaskProcessor interface {
 	Process(ctx context.Context) error
+}
+
+type Task interface {
+	Run(ctx context.Context) (TaskResult, error)
 	AppendGCState(state GCState) error
 }
 
-type Task struct {
-	ID         int64
-	Store      GCStateStore
-	State      []GCState
-	ResultChan chan TaskResult
+type GCTask struct {
+	ID    string
+	State []GCState
 }
 
 type TaskResult struct {
-	ID     int64
+	ID     string
+	States []GCState
 	Err    error
-	Result interface{}
 }
 
-func NewTask(id int64, store GCStateStore, state []GCState, resultChan chan TaskResult) *Task {
-	return &Task{
-		ID:         id,
-		Store:      store,
-		State:      state,
-		ResultChan: resultChan,
+var _ Task = &GCTask{}
+
+func NewGCTask() *GCTask {
+	return &GCTask{
+		ID: uuid.New().String(),
 	}
 }
 
-var _ TaskProcessor = &Task{}
+func (t *GCTask) AppendGCState(state GCState) error {
+	t.State = append(t.State, state)
+	return nil
+}
 
-func (t *Task) Process(ctx context.Context) error {
+func (t *GCTask) Run(ctx context.Context) (TaskResult, error) {
 	for _, state := range t.State {
 		for _, segmentState := range state.Segments {
-			if segmentState.Status == SegmentStatus_Dropping {
+			if *segmentState.Status == SegmentStatus_Dropping {
 				err := t.cleanUp(ctx, segmentState.SegmentID)
 				if err != nil {
 					log.Error("fail to clean up segment", zap.String("segmentID", segmentState.SegmentID), zap.Error(err))
 					continue
 				}
-				err = t.Store.UpdateSegment(ctx, segmentState.SegmentID, SegmentStatus_Dropped)
+				*segmentState.Status = SegmentStatus_Dropped
 				if err != nil {
 					log.Error("fail to update segment status", zap.String("segmentID", segmentState.SegmentID), zap.Error(err))
 					continue
@@ -53,21 +58,15 @@ func (t *Task) Process(ctx context.Context) error {
 			}
 		}
 	}
-	// We can potentially return the number of segments cleaned up and the error messages
-	t.ResultChan <- TaskResult{
+	result := TaskResult{
 		ID:     t.ID,
-		Err:    nil,
-		Result: nil,
+		States: t.State,
 	}
-	return nil
+	log.Info("gc task finished", zap.Any("taskID", result))
+	return result, nil
 }
 
-func (t *Task) AppendGCState(state GCState) error {
-	t.State = append(t.State, state)
-	return nil
-}
-
-func (t *Task) cleanUp(ctx context.Context, segmentID string) error {
+func (t *GCTask) cleanUp(ctx context.Context, segmentID string) error {
 	log.Info("cleaning up segment", zap.String("segmentID", segmentID))
 	return nil
 }

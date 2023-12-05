@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: gcprocessor
+  name: gcprocessor
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gcprocessor
+  template:
+    metadata:
+      labels:
+        app: gcprocessor
+    spec:
+      automountServiceAccountToken: true
+      serviceAccount: gcprocessor-sa
+      containers:
+      - image: gc-processor
+        name: gc-processor
+        imagePullPolicy: IfNotPresent
+        args:
+          - --lease-name=my-lease
+        env:
+          - name: POD_NAME
+            valueFrom:
+                  fieldRef:
+                    apiVersion: v1
+                    fieldPath: metadata.name
