@@ -14,6 +14,7 @@ type Collection struct {
 	DatabaseID string          `gorm:"database_id"`
 	Ts         types.Timestamp `gorm:"ts;type:bigint;default:0"`
 	IsDeleted  bool            `gorm:"is_deleted;type:bool;default:false"`
+	Status     string          `gorm:"status;type:string;not null"`
 	CreatedAt  time.Time       `gorm:"created_at;type:timestamp;not null;default:current_timestamp"`
 	UpdatedAt  time.Time       `gorm:"updated_at;type:timestamp;not null;default:current_timestamp"`
 }
@@ -21,6 +22,12 @@ type Collection struct {
 func (v Collection) TableName() string {
 	return "collections"
 }
+
+const (
+	CollectionStatusActive   = "active"
+	CollectionStatusDropping = "dropping"
+	CollectionStatusDropped  = "dropped"
+)
 
 type CollectionAndMetadata struct {
 	Collection         *Collection
@@ -33,6 +40,7 @@ type CollectionAndMetadata struct {
 type ICollectionDb interface {
 	GetCollections(collectionID *string, collectionName *string, collectionTopic *string, tenantID string, databaseName string) ([]*CollectionAndMetadata, error)
 	DeleteCollectionByID(collectionID string) error
+	SoftDeleteCollectionByID(collectionID string) error
 	Insert(in *Collection) error
 	Update(in *Collection) error
 	DeleteAll() error

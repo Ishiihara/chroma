@@ -313,20 +313,32 @@ func (tc *Catalog) GetCollections(ctx context.Context, collectionID types.Unique
 func (tc *Catalog) DeleteCollection(ctx context.Context, deleteCollection *model.DeleteCollection) error {
 	return tc.txImpl.Transaction(ctx, func(txCtx context.Context) error {
 		collectionID := deleteCollection.ID
-		err := tc.metaDomain.CollectionDb(txCtx).DeleteCollectionByID(collectionID.String())
-		if err != nil {
-			return err
-		}
-		err = tc.metaDomain.CollectionMetadataDb(txCtx).DeleteByCollectionID(collectionID.String())
-		if err != nil {
-			return err
+		softDelete := deleteCollection.SoftDelete
+		if softDelete {
+			err := tc.metaDomain.CollectionDb(txCtx).SoftDeleteCollectionByID(collectionID.String())
+			if err != nil {
+				return err
+			}
+			err = tc.metaDomain.SegmentDb(txCtx).SoftDeleteSegmentByCollectionID(collectionID.String())
+			if err != nil {
+				return err
+			}
+		} else {
+			err := tc.metaDomain.CollectionDb(txCtx).DeleteCollectionByID(collectionID.String())
+			if err != nil {
+				return err
+			}
+			err = tc.metaDomain.CollectionMetadataDb(txCtx).DeleteByCollectionID(collectionID.String())
+			if err != nil {
+				return err
+			}
 		}
 		notificationRecord := &dbmodel.Notification{
 			CollectionID: collectionID.String(),
 			Type:         dbmodel.NotificationTypeDeleteCollection,
 			Status:       dbmodel.NotificationStatusPending,
 		}
-		err = tc.metaDomain.NotificationDb(txCtx).Insert(notificationRecord)
+		err := tc.metaDomain.NotificationDb(txCtx).Insert(notificationRecord)
 		if err != nil {
 			return err
 		}
@@ -430,7 +442,7 @@ func (tc *Catalog) CreateSegment(ctx context.Context, createSegment *model.Creat
 			}
 		}
 		// get segment
-		segmentList, err := tc.metaDomain.SegmentDb(txCtx).GetSegments(createSegment.ID, nil, nil, nil, types.NilUniqueID())
+		segmentList, err := tc.metaDomain.SegmentDb(txCtx).GetSegments(createSegment.ID, nil, nil, nil, types.NilUniqueID(), nil)
 		if err != nil {
 			log.Error("error getting segment", zap.Error(err))
 			return err
@@ -447,7 +459,7 @@ func (tc *Catalog) CreateSegment(ctx context.Context, createSegment *model.Creat
 }
 
 func (tc *Catalog) GetSegments(ctx context.Context, segmentID types.UniqueID, segmentType *string, scope *string, topic *string, collectionID types.UniqueID, ts types.Timestamp) ([]*model.Segment, error) {
-	segmentAndMetadataList, err := tc.metaDomain.SegmentDb(ctx).GetSegments(segmentID, segmentType, scope, topic, collectionID)
+	segmentAndMetadataList, err := tc.metaDomain.SegmentDb(ctx).GetSegments(segmentID, segmentType, scope, topic, collectionID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +559,7 @@ func (tc *Catalog) UpdateSegment(ctx context.Context, updateSegment *model.Updat
 		}
 
 		// get segment
-		segmentList, err := tc.metaDomain.SegmentDb(txCtx).GetSegments(updateSegment.ID, nil, nil, nil, types.NilUniqueID())
+		segmentList, err := tc.metaDomain.SegmentDb(txCtx).GetSegments(updateSegment.ID, nil, nil, nil, types.NilUniqueID(), nil)
 		if err != nil {
 			log.Error("error getting segment", zap.Error(err))
 			return err

@@ -7,6 +7,10 @@ type Notification struct {
 	Status       string `gorm:"status"`
 }
 
+func (v Notification) TableName() string {
+	return "notifications"
+}
+
 const (
 	NotificationTypeCreateCollection = "create_collection"
 	NotificationTypeDeleteCollection = "delete_collection"
@@ -16,7 +20,7 @@ const (
 	NotificationStatusPending = "pending"
 )
 
-//go:generate mockery --name=IOutBoxDb
+//go:generate mockery --name=INotificationDb
 type INotificationDb interface {
 	DeleteAll() error
 	Delete(id []int64) error

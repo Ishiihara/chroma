@@ -22,6 +22,14 @@ func (s *segmentDb) DeleteSegmentByID(id string) error {
 	return s.db.Where("id = ?", id).Delete(&dbmodel.Segment{}).Error
 }
 
+func (s *segmentDb) SoftDeleteSegmentByCollectionID(id string) error {
+	updates := map[string]interface{}{
+		"is_deleted": true,
+		"status":     dbmodel.SegmentStatusDropping,
+	}
+	return s.db.Model(&dbmodel.Segment{}).Where("collection_id = ?", id).Updates(updates).Error
+}
+
 func (s *segmentDb) Insert(in *dbmodel.Segment) error {
 	err := s.db.Create(&in).Error
 
@@ -33,7 +41,7 @@ func (s *segmentDb) Insert(in *dbmodel.Segment) error {
 	return nil
 }
 
-func (s *segmentDb) GetSegments(id types.UniqueID, segmentType *string, scope *string, topic *string, collectionID types.UniqueID) ([]*dbmodel.SegmentAndMetadata, error) {
+func (s *segmentDb) GetSegments(id types.UniqueID, segmentType *string, scope *string, topic *string, collectionID types.UniqueID, status *string) ([]*dbmodel.SegmentAndMetadata, error) {
 	var segments []*dbmodel.SegmentAndMetadata
 
 	query := s.db.Table("segments").
@@ -56,10 +64,13 @@ func (s *segmentDb) GetSegments(id types.UniqueID, segmentType *string, scope *s
 	if collectionID != types.NilUniqueID() {
 		query = query.Where("collection_id = ?", collectionID.String())
 	}
+	if status != nil {
+		query = query.Where("status = ?", status)
+	}
 
 	rows, err := query.Rows()
 	if err != nil {
-		log.Error("get segments failed", zap.String("segmentID", id.String()), zap.String("segmentType", *segmentType), zap.String("scope", *scope), zap.String("collectionTopic", *topic), zap.Error(err))
+		log.Error("get segments failed", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -181,4 +192,8 @@ func generateSegmentUpdatesWithoutID(in *dbmodel.UpdateSegment) map[string]inter
 func (s *segmentDb) Update(in *dbmodel.UpdateSegment) error {
 	updates := generateSegmentUpdatesWithoutID(in)
 	return s.db.Model(&dbmodel.Segment{}).Where("id = ?", in.ID).Updates(updates).Error
+}
+
+func (s *segmentDb) UpdateSegmentStatus(id []string, status string) error {
+	return s.db.Model(&dbmodel.Segment{}).Where("id in ?", id).Update("status", status).Error
 }

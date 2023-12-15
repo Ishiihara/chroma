@@ -282,7 +282,7 @@ func (mt *MetaTable) DeleteCollection(ctx context.Context, deleteCollection *mod
 		log.Error("collection not found", zap.Any("collectionID", collectionID))
 		return common.ErrCollectionDeleteNonExistingCollection
 	}
-
+	deleteCollection.SoftDelete = true
 	if err := mt.catalog.DeleteCollection(ctx, deleteCollection); err != nil {
 		return err
 	}

@@ -33,6 +33,7 @@ type DeleteCollection struct {
 	TenantID     string
 	DatabaseName string
 	Ts           types.Timestamp
+	SoftDelete   bool
 }
 
 type UpdateCollection struct {

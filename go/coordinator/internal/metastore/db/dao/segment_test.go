@@ -45,7 +45,7 @@ func TestSegmentDb_GetSegments(t *testing.T) {
 	}
 
 	// Test when all parameters are nil
-	segments, err := segmentDb.GetSegments(types.NilUniqueID(), nil, nil, nil, types.NilUniqueID())
+	segments, err := segmentDb.GetSegments(types.NilUniqueID(), nil, nil, nil, types.NilUniqueID(), nil)
 	assert.NoError(t, err)
 	assert.Len(t, segments, 1)
 	assert.Equal(t, segment.ID, segments[0].Segment.ID)
@@ -58,31 +58,31 @@ func TestSegmentDb_GetSegments(t *testing.T) {
 	assert.Equal(t, metadata.StrValue, segments[0].SegmentMetadata[0].StrValue)
 
 	// Test when filtering by ID
-	segments, err = segmentDb.GetSegments(types.MustParse(segment.ID), nil, nil, nil, types.NilUniqueID())
+	segments, err = segmentDb.GetSegments(types.MustParse(segment.ID), nil, nil, nil, types.NilUniqueID(), nil)
 	assert.NoError(t, err)
 	assert.Len(t, segments, 1)
 	assert.Equal(t, segment.ID, segments[0].Segment.ID)
 
 	// Test when filtering by type
-	segments, err = segmentDb.GetSegments(types.NilUniqueID(), &segment.Type, nil, nil, types.NilUniqueID())
+	segments, err = segmentDb.GetSegments(types.NilUniqueID(), &segment.Type, nil, nil, types.NilUniqueID(), nil)
 	assert.NoError(t, err)
 	assert.Len(t, segments, 1)
 	assert.Equal(t, segment.ID, segments[0].Segment.ID)
 
 	// Test when filtering by scope
-	segments, err = segmentDb.GetSegments(types.NilUniqueID(), nil, &segment.Scope, nil, types.NilUniqueID())
+	segments, err = segmentDb.GetSegments(types.NilUniqueID(), nil, &segment.Scope, nil, types.NilUniqueID(), nil)
 	assert.NoError(t, err)
 	assert.Len(t, segments, 1)
 	assert.Equal(t, segment.ID, segments[0].Segment.ID)
 
 	// Test when filtering by topic
-	segments, err = segmentDb.GetSegments(types.NilUniqueID(), nil, nil, segment.Topic, types.NilUniqueID())
+	segments, err = segmentDb.GetSegments(types.NilUniqueID(), nil, nil, segment.Topic, types.NilUniqueID(), nil)
 	assert.NoError(t, err)
 	assert.Len(t, segments, 1)
 	assert.Equal(t, segment.ID, segments[0].Segment.ID)
 
 	// Test when filtering by collection ID
-	segments, err = segmentDb.GetSegments(types.NilUniqueID(), nil, nil, nil, types.MustParse(*segment.CollectionID))
+	segments, err = segmentDb.GetSegments(types.NilUniqueID(), nil, nil, nil, types.MustParse(*segment.CollectionID), nil)
 	assert.NoError(t, err)
 	assert.Len(t, segments, 1)
 	assert.Equal(t, segment.ID, segments[0].Segment.ID)

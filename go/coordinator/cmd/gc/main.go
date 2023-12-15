@@ -4,13 +4,11 @@ import (
 	"context"
 	"flag"
 	"os"
-	"strconv"
 	"time"
 
-	"github.com/pingcap/log"
-	"go.uber.org/zap"
-
 	"github.com/chroma/chroma-coordinator/internal/gc"
+	"github.com/chroma/chroma-coordinator/internal/metastore/db/dao"
+	"github.com/chroma/chroma-coordinator/internal/metastore/db/dbcore"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -93,39 +91,11 @@ func getNewLock(lockName string, namespace string, podName string) *resourcelock
 }
 
 func run(ctx context.Context) {
-	klog.Info("I am the leader!")
-	numberWorkers := 5
 	gcInterval := 10 * time.Second
-	store := gc.NewMemoryGCStateStore()
-	gcProcessor := gc.NewSimpleGCProcessor(numberWorkers, store, gcInterval)
+	store := gc.NewMemoryJobStateStore()
+	txnImpl := dbcore.NewTxImpl()
+	metaDomain := dao.NewMetaDomain()
+	inputStore := gc.NewIOStore(metaDomain, txnImpl)
+	gcProcessor := gc.NewSimpleGCProcessor(inputStore, store, gcInterval)
 	gcProcessor.Start()
-	log.Info("GC Processor started")
-
-	eventGenerationTicker := time.NewTicker(1 * time.Second)
-	segmentCounter := 0
-	for {
-		select {
-		case <-eventGenerationTicker.C:
-			status := gc.SegmentStatus_Dropping
-			collectionID := "test_collection_" + strconv.Itoa(segmentCounter)
-			segmentID := "test_segment_" + strconv.Itoa(segmentCounter)
-			path := "test_segment_path_" + strconv.Itoa(segmentCounter)
-			gcState := gc.GCState{
-				CollectionID: collectionID,
-				Segments: map[string]gc.SegmentState{
-					segmentID: {
-						SegmentID: segmentID,
-						Path:      path,
-						Status:    &status,
-					},
-				},
-			}
-			store.AddGCState(ctx, gcState)
-			log.Info("GC event generated", zap.String("collectionID", collectionID), zap.String("segmentID", segmentID), zap.String("path", path))
-			log.Info("GC event added to store", zap.Any("gcState", gcState))
-			segmentCounter++
-		case <-ctx.Done():
-			log.Info("GC Processor is stopped")
-		}
-	}
 }

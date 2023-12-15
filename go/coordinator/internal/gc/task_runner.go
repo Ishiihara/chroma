@@ -12,16 +12,13 @@ type TaskRunner interface {
 }
 
 type SimpleTaskRunner struct {
-	numWorkers int
+}
+
+func NewSimpleTaskRunner() *SimpleTaskRunner {
+	return &SimpleTaskRunner{}
 }
 
 var _ TaskRunner = &SimpleTaskRunner{}
-
-func NewSimpleTaskRunner(numWorkers int) *SimpleTaskRunner {
-	return &SimpleTaskRunner{
-		numWorkers: numWorkers,
-	}
-}
 
 func (s *SimpleTaskRunner) Execute(ctx context.Context, task Task, resultChan chan TaskResult) error {
 	go func() {

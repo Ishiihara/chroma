@@ -1,6 +1,6 @@
 package gc
 
-type GCState struct {
+type CollectionState struct {
 	CollectionID string
 	Segments     map[string]SegmentState
 }

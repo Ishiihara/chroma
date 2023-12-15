@@ -136,6 +136,14 @@ func (s *collectionDb) DeleteCollectionByID(collectionID string) error {
 	return s.db.Where("id = ?", collectionID).Delete(&dbmodel.Collection{}).Error
 }
 
+func (s *collectionDb) SoftDeleteCollectionByID(collectionID string) error {
+	updates := map[string]interface{}{
+		"is_deleted": true,
+		"status":     dbmodel.CollectionStatusDropping,
+	}
+	return s.db.Model(&dbmodel.Collection{}).Where("id = ?", collectionID).Updates(updates).Error
+}
+
 func (s *collectionDb) Insert(in *dbmodel.Collection) error {
 	return s.db.Create(&in).Error
 }
