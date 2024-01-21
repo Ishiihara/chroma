@@ -98,7 +98,7 @@ pub(crate) trait Receiver<M>: Send + Sync + ReceiverClone<M> {
     async fn send(&self, message: M) -> Result<(), ChannelError>;
 }
 
-trait ReceiverClone<M> {
+pub(crate) trait ReceiverClone<M> {
     fn clone_box(&self) -> Box<dyn Receiver<M>>;
 }
 

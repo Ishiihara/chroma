@@ -101,3 +101,54 @@ pub async fn worker_entrypoint() {
         scheduler_handler.join(),
     );
 }
+
+pub async fn index_entrypoint() {
+    let config = config::RootConfig::load();
+    // Create all the core components and start them
+
+    // The two root components are ingest, and the gRPC server
+    let mut system: system::System = system::System::new();
+
+    let mut ingest = match ingest::LogIngest::try_from_config(&config.worker).await {
+        Ok(ingest) => ingest,
+        Err(err) => {
+            println!("Failed to create ingest component: {:?}", err);
+            return;
+        }
+    };
+
+    let mut memberlist =
+        match memberlist::CustomResourceMemberlistProvider::try_from_config(&config.worker).await {
+            Ok(memberlist) => memberlist,
+            Err(err) => {
+                println!("Failed to create memberlist component: {:?}", err);
+                return;
+            }
+        };
+
+    let segment_manager = match segment::SegmentManager::try_from_config(&config.worker).await {
+        Ok(segment_manager) => segment_manager,
+        Err(err) => {
+            println!("Failed to create segment manager component: {:?}", err);
+            return;
+        }
+    };
+
+    let mut segment_ingestor_receivers =
+        Vec::with_capacity(config.worker.num_indexing_threads as usize);
+    for _ in 0..config.worker.num_indexing_threads {
+        let segment_ingestor = segment::SegmentIngestor::new(segment_manager.clone());
+        let segment_ingestor_handle = system.start_component(segment_ingestor);
+        let recv = segment_ingestor_handle.receiver();
+        segment_ingestor_receivers.push(recv);
+    }
+
+    let mut worker_server = match server::WorkerServer::try_from_config(&config.worker).await {
+        Ok(worker_server) => worker_server,
+        Err(err) => {
+            println!("Failed to create worker server component: {:?}", err);
+            return;
+        }
+    };
+    worker_server.set_segment_manager(segment_manager.clone());
+}

@@ -42,6 +42,8 @@ impl SegmentManager {
         }
     }
 
+    pub(crate) fn flush(&mut self, collection_id: String) {}
+
     pub(crate) async fn write_record(&mut self, record: Box<EmbeddingRecord>) {
         let collection_id = record.collection_id;
         let mut target_segment = None;
