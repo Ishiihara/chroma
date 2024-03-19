@@ -1,3 +1,6 @@
+use crate::errors::ChromaError;
+
+use super::dedicated_executor::Job;
 use super::scheduler::Scheduler;
 use async_trait::async_trait;
 use futures::Stream;
@@ -18,7 +21,9 @@ pub(crate) enum ComponentState {
 #[derive(Debug, PartialEq)]
 pub(crate) enum ComponentRuntime {
     Global,
+    Inherit,
     Dedicated,
+    MultiThread,
 }
 
 /// A component is a processor of work that can be run in a system.
@@ -30,12 +35,18 @@ pub(crate) enum ComponentRuntime {
 /// # Methods
 /// - queue_size: The size of the queue to use for the component before it starts dropping messages
 /// - on_start: Called when the component is started
+/// - run: The main loop of the component
+#[async_trait]
 pub(crate) trait Component: Send + Sized + Debug + 'static {
+    type Output;
+
     fn queue_size(&self) -> usize;
     fn runtime() -> ComponentRuntime {
         ComponentRuntime::Global
     }
     fn on_start(&mut self, ctx: &ComponentContext<Self>) -> () {}
+
+    async fn run_task(&mut self, ctx: &ComponentContext<Self>) -> Self::Output;
 }
 
 /// A handler is a component that can process messages of a given type.
@@ -47,6 +58,14 @@ where
     Self: Component + Sized + 'static,
 {
     async fn handle(&mut self, message: M, ctx: &ComponentContext<Self>) -> ();
+}
+
+#[async_trait]
+pub(crate) trait HandlerWithResult<M, T>
+where
+    Self: Component + Sized + 'static,
+{
+    async fn handle(&mut self, message: M, ctx: &ComponentContext<Self>) -> T;
 }
 
 /// A stream handler is a component that can process messages of a given type from a stream.
@@ -63,6 +82,46 @@ where
         S: Stream + Send + Stream<Item = M> + 'static,
     {
         ctx.system.register_stream(stream, ctx);
+    }
+}
+
+pub(crate) struct JobHandle<T> {
+    cancellation_token: tokio_util::sync::CancellationToken,
+    state: ComponentState,
+    join_handle: Option<tokio::task::JoinHandle<()>>,
+    pub(crate) job: Job<T>,
+}
+
+impl<T> JobHandle<T> {
+    pub(crate) fn new(
+        cancellation_token: tokio_util::sync::CancellationToken,
+        join_handle: Option<tokio::task::JoinHandle<()>>,
+        job: Job<T>,
+    ) -> Self {
+        JobHandle {
+            cancellation_token: cancellation_token,
+            state: ComponentState::Running,
+            join_handle: join_handle,
+            job: job,
+        }
+    }
+
+    pub(crate) fn stop(&mut self) {
+        self.cancellation_token.cancel();
+        self.state = ComponentState::Stopped;
+    }
+
+    pub(crate) async fn join(&mut self) {
+        match self.join_handle.take() {
+            Some(handle) => {
+                handle.await;
+            }
+            None => return,
+        };
+    }
+
+    pub(crate) fn state(&self) -> &ComponentState {
+        return &self.state;
     }
 }
 
@@ -130,7 +189,7 @@ where
     C: Component + 'static,
 {
     pub(crate) system: System,
-    pub(crate) sender: Sender<C>,
+    pub sender: Sender<C>,
     pub(crate) cancellation_token: tokio_util::sync::CancellationToken,
     pub(crate) scheduler: Scheduler,
 }
@@ -166,7 +225,10 @@ mod tests {
     }
     impl StreamHandler<usize> for TestComponent {}
 
+    #[async_trait]
     impl Component for TestComponent {
+        type Output = ();
+
         fn queue_size(&self) -> usize {
             self.queue_size
         }
@@ -175,6 +237,8 @@ mod tests {
             let test_stream = stream::iter(vec![1, 2, 3]);
             self.register_stream(test_stream, ctx);
         }
+
+        async fn run_task(&mut self, _ctx: &ComponentContext<TestComponent>) -> () {}
     }
 
     #[tokio::test]

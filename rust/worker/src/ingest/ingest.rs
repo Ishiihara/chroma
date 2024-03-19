@@ -44,10 +44,14 @@ pub(crate) struct Ingest {
     scheduler: Option<Box<dyn Receiver<(String, Box<EmbeddingRecord>)>>>,
 }
 
+#[async_trait]
 impl Component for Ingest {
+    type Output = ();
     fn queue_size(&self) -> usize {
         return self.queue_size;
     }
+
+    async fn run_task(&mut self, ctx: &ComponentContext<Self>) -> () {}
 }
 
 impl Debug for Ingest {
@@ -305,7 +309,9 @@ impl PulsarIngestTopic {
     }
 }
 
+#[async_trait]
 impl Component for PulsarIngestTopic {
+    type Output = ();
     fn queue_size(&self) -> usize {
         1000
     }
@@ -360,6 +366,8 @@ impl Component for PulsarIngestTopic {
         });
         self.register_stream(stream, ctx);
     }
+
+    async fn run_task(&mut self, ctx: &ComponentContext<Self>) -> () {}
 }
 
 #[async_trait]

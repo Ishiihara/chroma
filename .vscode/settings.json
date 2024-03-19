@@ -128,4 +128,7 @@
     "unordered_set": "cpp",
     "algorithm": "cpp"
   },
+  "rust-analyzer.linkedProjects": [
+    "./rust/worker/Cargo.toml"
+  ],
 }

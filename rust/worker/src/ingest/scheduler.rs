@@ -49,7 +49,9 @@ impl RoundRobinScheduler {
     }
 }
 
+#[async_trait]
 impl Component for RoundRobinScheduler {
+    type Output = ();
     fn queue_size(&self) -> usize {
         1000
     }
@@ -133,6 +135,8 @@ impl Component for RoundRobinScheduler {
             }
         });
     }
+
+    async fn run_task(&mut self, ctx: &ComponentContext<Self>) -> () {}
 }
 
 #[async_trait]

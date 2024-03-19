@@ -176,7 +176,9 @@ impl CustomResourceMemberlistProvider {
     }
 }
 
+#[async_trait]
 impl Component for CustomResourceMemberlistProvider {
+    type Output = ();
     fn queue_size(&self) -> usize {
         self.queue_size
     }
@@ -184,6 +186,8 @@ impl Component for CustomResourceMemberlistProvider {
     fn on_start(&mut self, ctx: &ComponentContext<CustomResourceMemberlistProvider>) {
         self.connect_to_kube_stream(ctx);
     }
+
+    async fn run_task(&mut self, _ctx: &ComponentContext<CustomResourceMemberlistProvider>) -> () {}
 }
 
 #[async_trait]

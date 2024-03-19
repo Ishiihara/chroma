@@ -2699,6 +2699,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "metric"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f79b2a905019431fc3c842128e7eb9529c4f09f3e1b310f8d76d150f3030832d"
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4212,6 +4218,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6ecd384b10a64542d77071bd64bd7b231f4ed5940fba55e98c3de13824cf3d7"
 
 [[package]]
+name = "snafu"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ed22871b3fe6eff9f1b48f6cbd54149ff8e9acd740dea9146092435f9c43bd3"
+dependencies = [
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4651148226ec36010993fcba6c3381552e8463e9f3e337b75af202b0688b5274"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.52",
+]
+
+[[package]]
 name = "snap"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5277,10 +5304,14 @@ dependencies = [
  "futures",
  "k8s-openapi",
  "kube",
+ "libc",
+ "metric",
  "murmur3",
  "num-bigint",
  "num_cpus",
+ "once_cell",
  "parking_lot",
+ "pin-project",
  "prost 0.12.3",
  "prost-types 0.12.3",
  "pulsar",
@@ -5290,6 +5321,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "snafu",
  "tantivy",
  "tempfile",
  "thiserror",

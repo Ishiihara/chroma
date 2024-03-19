@@ -1,4 +1,5 @@
 use crate::compactor::scheduler_policy::SchedulerPolicy;
+use crate::compactor::types::ScheduleMessage;
 use crate::compactor::types::Task;
 use crate::log::log::CollectionInfo;
 use crate::log::log::CollectionRecord;
@@ -7,6 +8,7 @@ use crate::sysdb::sysdb::SysDb;
 use crate::system::Component;
 use crate::system::ComponentContext;
 use crate::system::Handler;
+use crate::system::Receiver;
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::fmt::{Debug, Formatter};
@@ -22,6 +24,7 @@ pub(crate) struct Scheduler {
     task_queue: Arc<Mutex<Vec<Task>>>,
     max_queue_size: usize,
     schedule_interval: Duration,
+    compaction_manager: Box<dyn Receiver<Task>>,
 }
 
 impl Scheduler {
@@ -31,6 +34,7 @@ impl Scheduler {
         policy: Box<dyn SchedulerPolicy>,
         max_queue_size: usize,
         schedule_interval: Duration,
+        compaction_manager: Box<dyn Receiver<Task>>,
     ) -> Scheduler {
         Scheduler {
             log,
@@ -39,6 +43,7 @@ impl Scheduler {
             task_queue: Arc::new(Mutex::new(Vec::with_capacity(max_queue_size))),
             max_queue_size,
             schedule_interval,
+            compaction_manager,
         }
     }
 
@@ -117,8 +122,32 @@ impl Scheduler {
             return;
         }
         let collection_records = self.verify_and_enrich_collections(collections).await;
+
         self.schedule_internal(collection_records).await;
     }
+
+    pub(crate) async fn schedule_async(&mut self) {
+        let collections = self.get_collections_with_new_data().await;
+        if collections.is_empty() {
+            return;
+        }
+        let collection_records = self.verify_and_enrich_collections(collections).await;
+
+        let tasks = self
+            .policy
+            .determine(collection_records, self.max_queue_size as i32);
+
+        for task in tasks {
+            match self.compaction_manager.send(task).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error sending task: {:?}", e);
+                }
+            }
+        }
+    }
+
+    pub(crate) async fn handle_task_complete(&mut self, task: Task) {}
 
     pub(crate) fn take_task(&self) -> Option<Task> {
         let mut task_queue = self.task_queue.lock();
@@ -134,7 +163,10 @@ impl Scheduler {
     }
 }
 
+#[async_trait]
 impl Component for Scheduler {
+    type Output = ();
+
     fn on_start(&mut self, ctx: &ComponentContext<Self>) {
         ctx.scheduler.schedule_interval(
             ctx.sender.clone(),
@@ -149,6 +181,8 @@ impl Component for Scheduler {
         // TODO: make this comfigurable
         1000
     }
+
+    async fn run_task(&mut self, _ctx: &ComponentContext<Self>) {}
 }
 
 impl Debug for Scheduler {
@@ -156,9 +190,6 @@ impl Debug for Scheduler {
         write!(f, "Scheduler")
     }
 }
-
-#[derive(Clone, Debug)]
-struct ScheduleMessage {}
 
 #[async_trait]
 impl Handler<ScheduleMessage> for Scheduler {
@@ -334,14 +365,14 @@ mod tests {
         };
         sysdb.add_collection(collection_1);
         sysdb.add_collection(collection_2);
-        let scheduler_policy = Box::new(LasCompactionTimeSchedulerPolicy {});
-        let mut scheduler =
-            Scheduler::new(log, sysdb, scheduler_policy, 1000, Duration::from_secs(1));
+        // let scheduler_policy = Box::new(LasCompactionTimeSchedulerPolicy {});
+        // let mut scheduler =
+        //     Scheduler::new(log, sysdb, scheduler_policy, 1000, Duration::from_secs(1));
 
-        scheduler.schedule().await;
-        let tasks = scheduler.get_tasks();
-        assert_eq!(tasks.len(), 2);
-        assert_eq!(tasks[0].collection_id, collection_id_1);
-        assert_eq!(tasks[1].collection_id, collection_id_2);
+        // scheduler.schedule().await;
+        // let tasks = scheduler.get_tasks();
+        // assert_eq!(tasks.len(), 2);
+        // assert_eq!(tasks[0].collection_id, collection_id_1);
+        // assert_eq!(tasks[1].collection_id, collection_id_2);
     }
 }

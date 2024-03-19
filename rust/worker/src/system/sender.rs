@@ -56,7 +56,7 @@ pub(crate) struct Sender<C>
 where
     C: Component + Send + 'static,
 {
-    pub(super) sender: tokio::sync::mpsc::Sender<Wrapper<C>>,
+    pub sender: tokio::sync::mpsc::Sender<Wrapper<C>>,
 }
 
 impl<C> Sender<C>
@@ -119,7 +119,7 @@ where
 
 // Reciever Impls
 
-pub(super) struct ReceiverImpl<C>
+pub struct ReceiverImpl<C>
 where
     C: Component,
 {
@@ -141,7 +141,7 @@ impl<C> ReceiverImpl<C>
 where
     C: Component,
 {
-    pub(super) fn new(sender: tokio::sync::mpsc::Sender<Wrapper<C>>) -> Self {
+    pub fn new(sender: tokio::sync::mpsc::Sender<Wrapper<C>>) -> Self {
         ReceiverImpl { sender }
     }
 }

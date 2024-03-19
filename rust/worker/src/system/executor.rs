@@ -2,8 +2,9 @@ use super::{
     scheduler::Scheduler,
     sender::{Sender, Wrapper},
     system::System,
-    Component,
+    Component, Handler, HandlerWithResult,
 };
+use crate::system::dedicated_executor::DedicatedExecutor;
 use crate::system::ComponentContext;
 use std::sync::Arc;
 use tokio::select;
@@ -61,20 +62,64 @@ where
                 message = channel.recv() => {
                     match message {
                         Some(mut message) => {
-                            message.handle(&mut self.handler,
-                                &ComponentContext{
-                                    system: self.inner.system.clone(),
-                                    sender: self.inner.sender.clone(),
-                                    cancellation_token: self.inner.cancellation_token.clone(),
-                                    scheduler: self.inner.scheduler.clone(),
-                                }
-                            ).await;
+                                message.handle(&mut self.handler,
+                                    &ComponentContext{
+                                        system: self.inner.system.clone(),
+                                        sender: self.inner.sender.clone(),
+                                        cancellation_token: self.inner.cancellation_token.clone(),
+                                        scheduler: self.inner.scheduler.clone(),
+                                    }
+                                ).await;
                         }
                         None => {
                             // TODO: Log error
                         }
                     }
                 }
+            }
+        }
+    }
+
+    pub(super) async fn invoke<M>(&mut self, message: M)
+    where
+        M: Send + 'static,
+        C: Handler<M>,
+    {
+        let ctx = ComponentContext {
+            system: self.inner.system.clone(),
+            sender: self.inner.sender.clone(),
+            cancellation_token: self.inner.cancellation_token.clone(),
+            scheduler: self.inner.scheduler.clone(),
+        };
+        select! {
+            _ = self.inner.cancellation_token.cancelled() => {
+                return;
+            }
+            _ = self.handler.handle(message, &ctx) => {}
+        }
+    }
+
+    pub(super) async fn invoke_with_send<M, T>(
+        &mut self,
+        message: M,
+        sender: tokio::sync::mpsc::Sender<T>,
+    ) where
+        M: Send + 'static,
+        C: HandlerWithResult<M, T>,
+        T: Send + 'static,
+    {
+        let ctx = ComponentContext {
+            system: self.inner.system.clone(),
+            sender: self.inner.sender.clone(),
+            cancellation_token: self.inner.cancellation_token.clone(),
+            scheduler: self.inner.scheduler.clone(),
+        };
+        select! {
+            _ = self.inner.cancellation_token.cancelled() => {
+                return;
+            }
+            result = self.handler.handle(message, &ctx) => {
+                let _ = sender.send(result).await;
             }
         }
     }

@@ -175,7 +175,9 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl Component for TestComponent {
+        type Output = ();
         fn queue_size(&self) -> usize {
             self.queue_size
         }
@@ -194,6 +196,8 @@ mod tests {
                 ctx,
             );
         }
+
+        async fn run_task(&mut self, _ctx: &ComponentContext<TestComponent>) -> () {}
     }
 
     #[tokio::test]

@@ -16,13 +16,17 @@ pub(crate) struct SegmentIngestor {
     segment_manager: SegmentManager,
 }
 
+#[async_trait]
 impl Component for SegmentIngestor {
+    type Output = ();
     fn queue_size(&self) -> usize {
         1000
     }
     fn runtime() -> ComponentRuntime {
         ComponentRuntime::Dedicated
     }
+
+    async fn run_task(&mut self, ctx: &ComponentContext<Self>) -> () {}
 }
 
 impl Debug for SegmentIngestor {
