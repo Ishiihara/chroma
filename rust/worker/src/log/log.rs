@@ -1,3 +1,4 @@
+use crate::cache::log_cache::LogCache;
 use crate::chroma_proto;
 use crate::chroma_proto::log_service_client::LogServiceClient;
 use crate::config::Configurable;
@@ -75,6 +76,61 @@ pub(crate) struct GrpcLog {
 impl GrpcLog {
     pub(crate) fn new(client: LogServiceClient<tonic::transport::Channel>) -> Self {
         Self { client }
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct BufferedLog {
+    log: Box<dyn Log>,
+    cache: LogCache,
+}
+
+impl BufferedLog {
+    pub(crate) fn new(log: Box<dyn Log>, cache: LogCache) -> Self {
+        Self { log, cache }
+    }
+}
+
+impl Debug for BufferedLog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BufferedLog")
+            .field("log", &self.log)
+            .field("cache", &self.cache)
+            .finish()
+    }
+}
+
+#[async_trait]
+impl Log for BufferedLog {
+    async fn read(
+        &mut self,
+        collection_id: Uuid,
+        offset: i64,
+        batch_size: i32,
+        end_timestamp: Option<i64>,
+    ) -> Result<Vec<LogRecord>, PullLogsError> {
+        // read the logs from the cache
+        let logs = self.cache.get_logs(offset, batch_size).await;
+        if logs.len() as i32 == batch_size {
+            return Ok(logs);
+        } else {
+            // read the logs from the log service
+            let new_logs = self
+                .log
+                .read(collection_id, offset, batch_size, end_timestamp)
+                .await?;
+            // insert the new logs into the cache
+            for log in new_logs.iter() {
+                self.cache.insert_log(log.clone());
+            }
+            Ok(new_logs)
+        }
+    }
+
+    async fn get_collections_with_new_data(
+        &mut self,
+    ) -> Result<Vec<CollectionInfo>, GetCollectionsWithNewDataError> {
+        self.log.get_collections_with_new_data().await
     }
 }
 
